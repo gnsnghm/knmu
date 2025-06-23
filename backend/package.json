@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "lint": "eslint \"src/**/*.{js,ts}\"",
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "jest"
@@ -16,6 +17,10 @@
     "pg": "^8.11.3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.29.0",
+    "eslint": "^9.29.0",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^16.2.0",
     "jest": "^30.0.0",
     "nodemon": "^3.1.10",
     "supertest": "^7.1.1"
