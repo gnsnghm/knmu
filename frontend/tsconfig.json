@@ -1,0 +1,12 @@
+// frontend/tsconfig.json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "jsx": "react-jsx",
+    "paths": {
+      "@/lib/*": ["lib/*"], // "@/lib/api" など
+      "@/components/*": ["components/*"]
+    },
+    "types": ["node"] // Next.js が内部で参照
+  }
+}

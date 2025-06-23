@@ -1,0 +1,73 @@
+########################
+#  Node / npm / pnpm  #
+########################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+.bundle/
+
+########################
+#  Next.js / React build
+########################
+.next/
+out/
+dist/
+build/
+coverage/
+.nyc_output/
+turbo/
+
+########################
+#  TypeScript
+########################
+*.tsbuildinfo
+
+########################
+#  Logs & Reports
+########################
+*.log
+*.log.*
+logs/
+reports/
+coverage-final.json
+
+########################
+#  Environment secrets
+########################
+.env
+.env.*               # .env.dev, .env.prod など
+
+########################
+#  Docker / Compose
+########################
+*.tar
+docker-compose.override.yml
+db-data/             # postgres ボリューム（compose で mount 済み）
+pgdata/
+
+########################
+#  Database dumps / init scripts
+########################
+*.sql.dump
+*.sqlite
+*.sqlite3
+
+########################
+#  IDE / Editor
+########################
+.vscode/
+.idea/
+*.swp
+*.swo
+
+########################
+#  OS / Misc
+########################
+.DS_Store
+Thumbs.db
+ehthumbs.db
+*.orig
+*.tgz

@@ -1,0 +1,49 @@
+services:
+  # ======= フロントエンド (Next.js) =======
+  frontend:
+    build:
+      context: ./frontend
+      target: runner
+    command: ["node", "server.js"]
+    environment:
+      - NODE_ENV=production
+    ports: ["3001:3000"]
+    depends_on:
+      backend: { condition: service_started }
+    networks: [internal]
+
+  # ======= バックエンド (Express) =======
+  backend:
+    build: ./backend
+    environment:
+      - PG_URL=${PG_URL}
+      - YAHOO_APP_ID=${YAHOO_APP_ID}
+      - ALLOW_UNAUTH_HOSTS=localhost,127.0.0.1
+      - DEV_EMAIL=${DEV_EMAIL}
+    ports: ["3000:3000"]
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [internal]
+  db:
+    image: postgres:16
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=household
+    ports: ["5432:5432"]
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db/init/:/docker-entrypoint-initdb.d/:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 5
+    networks: [internal]
+
+  # ======= Cloudflare Tunnel =======
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel run --token ${CF_TUNNEL_TOKEN}
+    networks: [internal]
+
+volumes: { db-data: {} }
+networks: { internal: {} }
