@@ -1,16 +1,18 @@
-// frontend/app/layout.tsx
-import "./globals.css";
-import type { ReactNode } from "react";
+import "./styles/globals.css"; // Tailwind のグローバル
 
 export const metadata = {
   title: "Consumables Manager",
-  description: "在庫をブラウザで管理",
+  description: "Household stock tracker",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body className="min-h-screen bg-gray-50 text-gray-900">{children}</body>
     </html>
   );
 }

@@ -1,26 +1,14 @@
 "use client";
-import { useState } from "react";
-import { getItem } from "@/lib/api";
+import { useRouter } from "next/navigation";
 import { useScanner } from "./useScanner";
 
 export default function ScannerPage() {
-  const [msg, setMsg] = useState("バーコードをかざしてください");
-  const ref = useScanner(async (jan) => {
-    try {
-      const p = await getItem(jan);
-      setMsg(`${p.name}（${p.quantity ?? 0}個）`);
-    } catch {
-      setMsg("データがありません");
-    }
-  });
-
+  const router = useRouter();
+  const ref = useScanner((jan) => router.push(`/products/${jan}`));
   return (
-    <main className="container">
-      <video
-        ref={ref}
-        style={{ width: "100%", height: 280, background: "#000" }}
-      />
-      <p className="mt-4">{msg}</p>
+    <main className="flex flex-col items-center p-4">
+      <video ref={ref} className="w-full max-w-md aspect-video bg-black" />
+      <p className="mt-2 text-center">バーコードをかざしてください…</p>
     </main>
   );
 }

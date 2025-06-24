@@ -1,22 +1,24 @@
 # --------- build stage ---------
-FROM node:current-alpine AS builder
+FROM node:current-alpine AS deps
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 COPY . .
+
+FROM deps AS builder
 RUN npm run build
 
 # --------- production runner ---------
 FROM node:current-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV=production
 
 RUN mkdir -p /app/public
 
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/.next/standalone/ ./
+COPY --from=builder /app/.next/static ./static
 COPY --from=builder /app/public ./public
 
+ENV NODE_ENV=production
 EXPOSE 3000
 CMD ["node", "server.js"]

@@ -1,17 +1,17 @@
 // backend/src/middleware/auth.js
 import jwt from "jsonwebtoken";
 import fetch from "node-fetch";
-import jwkToPem from "jwk-to-pem"; // 既存と同じ
+import jwkToPem from "jwk-to-pem";
 import { pool } from "../db.js";
 
-const team = process.env.CF_TEAM_DOMAIN; // 例: https://xxx.cloudflareaccess.com
-const devEmail = process.env.DEV_EMAIL || ""; // 開発用バックドア
+const team = process.env.CF_TEAM_DOMAIN;
+const devEmail = process.env.DEV_EMAIL || "";
 const allowlist = (process.env.ALLOW_UNAUTH_HOSTS || "localhost,127.0.0.1")
   .split(",")
   .map((h) => h.trim()); // ← ★ 追加
 
 /** Express 認証ミドルウェア */
-export async function auth(req, res, next) {
+export default async function auth(req, res, next) {
   /* 1) localhost 系は認証バイパス */
   const host = req.headers.host?.split(":")[0]; // 3000 ポート除去
   if (allowlist.includes(host))

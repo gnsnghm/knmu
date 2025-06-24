@@ -1,7 +1,14 @@
-FROM node:current-alpine
+# ---------- Stage 1 : install dependencies ----------
+FROM node:current-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm install --omit=dev
-COPY . .
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
+
+# ---------- Stage 2 : runtime ----------
+FROM node:current-alpine AS runner
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY src ./src
+ENV NODE_ENV=production
 EXPOSE 3000
-CMD ["node","src/index.js"]
+CMD ["node","src/server.js"]
