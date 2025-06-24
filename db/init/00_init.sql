@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS products (
   name       TEXT NOT NULL,
   image_url  TEXT,
   brand      TEXT,
+  group_key  TEXT,
   group_id   INT REFERENCES groups(id),   -- ← 紐づけ
   meta_json  JSONB,
   created_at TIMESTAMPTZ DEFAULT now()
