@@ -40,62 +40,65 @@ export default function ScannerPage() {
   /**
    * カメラ起動 & 1 回だけデコード
    */
-  const startScan = async () => {
+  const startScan = () => {
     setMessage(null);
     setStarted(true);
-
-    try {
-      const reader = new BrowserMultiFormatReader();
-      codeReaderRef.current = reader;
-
-      // 背面カメラ優先、なければ自動選択
-      const constraints = {
-        video: {
-          facingMode: { ideal: "environment" },
-        },
-      } as const;
-
-      // 1 回成功するまで待機
-      const result = await reader.decodeOnceFromConstraints(
-        constraints,
-        videoRef.current!
-      );
-
-      const barcode = result.getText();
-
-      stopReader();
-
-      // サーバー側にバーコード照会
-      const res = await fetch(
-        `/api/products?barcode=${encodeURIComponent(barcode)}`,
-        { cache: "no-store" }
-      );
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.id) {
-          // 既存商品: 在庫数登録画面へ
-          router.push(`/products/${data.id}/stock`);
-          return;
-        }
-      }
-
-      // 見つからない or エラー時: 手動登録へ
-      router.push(`/products/new?barcode=${encodeURIComponent(barcode)}`);
-    } catch (err: any) {
-      if (err instanceof NotFoundException) {
-        setMessage("バーコードを読み取れませんでした。再度お試しください。");
-      } else if (err?.name === "NotAllowedError") {
-        setMessage(
-          "カメラへのアクセスが拒否されました。ブラウザの設定をご確認ください。"
-        );
-      } else {
-        setMessage(err?.message ?? "予期せぬエラーが発生しました。");
-      }
-      setStarted(false);
-      stopReader();
-    }
   };
+
+  /**
+   * started が true になったタイミングで実際の読み取り処理を開始
+   */
+  useEffect(() => {
+    if (!started || !videoRef.current) return;
+
+    const reader = new BrowserMultiFormatReader();
+    codeReaderRef.current = reader;
+
+    const constraints = {
+      video: {
+        facingMode: { ideal: "environment" },
+      },
+    } as const;
+
+    reader
+      .decodeOnceFromConstraints(constraints, videoRef.current)
+      .then(async (result) => {
+        const barcode = result.getText();
+        stopReader();
+
+        const res = await fetch(
+          `/api/products?barcode=${encodeURIComponent(barcode)}`,
+          { cache: "no-store" }
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.id) {
+            router.push(`/products/${data.id}/stock`);
+            return;
+          }
+        }
+
+        router.push(`/products/new?barcode=${encodeURIComponent(barcode)}`);
+      })
+      .catch((err: any) => {
+        if (err instanceof NotFoundException) {
+          setMessage("バーコードを読み取れませんでした。再度お試しください。");
+        } else if (err?.name === "NotAllowedError") {
+          setMessage(
+            "カメラへのアクセスが拒否されました。ブラウザの設定をご確認ください。"
+          );
+        } else {
+          setMessage(err?.message ?? "予期せぬエラーが発生しました。");
+        }
+        setStarted(false);
+        stopReader();
+      });
+
+    return () => {
+      stopReader();
+    };
+  }, [started]);
 
   // コンポーネントアンマウント時に必ずカメラを停止
   useEffect(() => {
