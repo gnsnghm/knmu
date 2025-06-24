@@ -3,7 +3,7 @@ import { Label, Input, Button } from "@/lib/form";
 export const dynamic = "force-dynamic";
 
 async function getShelf(id: string) {
-  if (id === "new") return { name: "" };
+  if (id === "new") return { label: "" };
   const r = await fetch(`/api/shelves`, { cache: "no-store" });
   const list = await r.json();
   return list.find((g: any) => g.id === Number(id));
@@ -28,7 +28,7 @@ export default async function ShelfForm({
       </h1>
       <div>
         <Label>名称</Label>
-        <Input name="name" defaultValue={shelf.name} required />
+        <Input name="label" defaultValue={shelf.label} required />
       </div>
       <Button>保存</Button>
     </form>
