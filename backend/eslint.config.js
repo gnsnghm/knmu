@@ -16,4 +16,13 @@ export default defineConfig([
       },
     },
   },
+  // 2) Jest グローバル
+  {
+    files: ["**/__tests__/**/*.{js,mjs,cjs}", "**/*.test.{js,mjs,cjs}"],
+    languageOptions: {
+      globals: {
+        ...globals.jest,
+      },
+    },
+  },
 ]);
