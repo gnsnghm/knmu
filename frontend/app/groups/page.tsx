@@ -1,31 +1,30 @@
+import { apiGet } from "@/lib/api";
 import Link from "next/link";
+
 export const dynamic = "force-dynamic";
 
-async function fetchGroups() {
-  const r = await fetch("/api/groups", { cache: "no-store" });
-  return r.json();
-}
+export default async function Groups() {
+  const groups = await apiGet("/api/groups");
 
-export default async function GroupList() {
-  const groups: any[] = await fetchGroups();
   return (
-    <main className="p-4 max-w-md mx-auto">
-      <h1 className="text-xl font-semibold mb-4">まとめコード</h1>
-      <Link href="/groups/new" className="underline text-blue-600">
-        ＋新規作成
-      </Link>
-      <ul className="mt-4 space-y-2">
-        {groups.map((g) => (
-          <li key={g.id}>
-            <Link
-              href={`/groups/${g.id}`}
-              className="block p-3 border rounded hover:bg-gray-50"
-            >
-              {g.name}
+    <main className="p-4 max-w-md mx-auto space-y-4">
+      <h1 className="text-xl font-bold">まとめコード</h1>
+      <ul className="space-y-2">
+        {groups.map((g: any) => (
+          <li key={g.id} className="border rounded p-3 flex justify-between">
+            <span>{g.name}</span>
+            <Link href={`/groups/${g.id}`} className="text-blue-600 underline">
+              編集
             </Link>
           </li>
         ))}
       </ul>
+      <Link
+        href="/groups/new"
+        className="rounded bg-blue-600 text-white px-4 py-2"
+      >
+        + 追加
+      </Link>
     </main>
   );
 }

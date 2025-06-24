@@ -5,13 +5,19 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS groups (
+  id          SERIAL PRIMARY KEY,
+  name        TEXT UNIQUE NOT NULL,
+  created_at  TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS products (
   id         SERIAL PRIMARY KEY,
   barcode    TEXT UNIQUE NOT NULL,
   name       TEXT NOT NULL,
-  brand      TEXT,
   image_url  TEXT,
-  group_key  TEXT,              -- ★ 先に含めておく
+  brand      TEXT,
+  group_id   INT REFERENCES groups(id),   -- ← 紐づけ
   meta_json  JSONB,
   created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -41,4 +47,4 @@ CREATE TABLE IF NOT EXISTS stock_history (
 
 -- インデックス
 CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
-CREATE INDEX IF NOT EXISTS idx_products_group   ON products(group_key);
+CREATE INDEX IF NOT EXISTS idx_products_group   ON products(group_id);

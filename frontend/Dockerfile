@@ -16,7 +16,7 @@ WORKDIR /app
 RUN mkdir -p /app/public
 
 COPY --from=builder /app/.next/standalone/ ./
-COPY --from=builder /app/.next/static ./static
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
 ENV NODE_ENV=production
