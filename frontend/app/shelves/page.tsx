@@ -15,13 +15,13 @@ export default async function ShelfList() {
         ＋新規作成
       </Link>
       <ul className="mt-4 space-y-2">
-        {shelves.map((g) => (
-          <li key={g.id}>
+        {shelves.map((s) => (
+          <li key={s.id}>
             <Link
-              href={`/shelves/${g.id}`}
+              href={`/shelves/${s.id}`}
               className="block p-3 border rounded hover:bg-gray-50"
             >
-              {g.name}
+              {s.label}
             </Link>
           </li>
         ))}
