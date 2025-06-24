@@ -3,9 +3,26 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import { defineConfig } from "eslint/config";
 
-
 export default defineConfig([
-  { files: ["**/*.{js,mjs,cjs,ts,mts,cts}"], plugins: { js }, extends: ["js/recommended"] },
-  { files: ["**/*.{js,mjs,cjs,ts,mts,cts}"], languageOptions: { globals: globals.browser } },
-  tseslint.configs.recommended,
+  // 1) JS/TS 共通推奨
+  {
+    files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+    ...js.configs.recommended,
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: "module",
+      parser: tseslint.parser,
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.es2023,
+      },
+    },
+  },
+  // 2) TypeScript 追加ルール
+  {
+    files: ["**/*.{ts,mts,cts,tsx}"],
+    plugins: { "@typescript-eslint": tseslint.plugin },
+    rules: tseslint.configs.recommended.rules,
+  },
 ]);
