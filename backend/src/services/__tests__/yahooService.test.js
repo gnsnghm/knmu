@@ -1,4 +1,5 @@
 import { fetchByJan } from '../yahooService.js';
+import { jest } from '@jest/globals';
 
 describe('fetchByJan', () => {
   const realFetch = global.fetch;
