@@ -11,6 +11,8 @@ import meRouter from "./routes/me.js";
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+// HTML form (application/x-www-form-urlencoded) 対応
+app.use(express.urlencoded({ extended: false }));
 app.use(auth);
 
 app.use("/api/items", items);
