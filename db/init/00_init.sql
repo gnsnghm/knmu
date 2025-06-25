@@ -28,23 +28,28 @@ CREATE TABLE IF NOT EXISTS shelves (
   label TEXT UNIQUE NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS stock (
-  id         SERIAL PRIMARY KEY,
-  user_id    INT REFERENCES users(id)    ON DELETE CASCADE,
-  product_id INT REFERENCES products(id) ON DELETE CASCADE,
-  shelf_id   INT REFERENCES shelves(id),
-  quantity   INT NOT NULL DEFAULT 0 CHECK (quantity >= 0),
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(user_id, product_id, shelf_id)
+CREATE TABLE stock (
+    id              SERIAL PRIMARY KEY,
+    product_id      INTEGER NOT NULL,
+    shelf_id        INTEGER NOT NULL,
+    add_quantity    INTEGER NOT NULL DEFAULT 0,
+    total_quantity  INTEGER NOT NULL DEFAULT 0
+                     CHECK (total_quantity >= 0),
+    updated_at      TIMESTAMPTZ DEFAULT now(),
+    UNIQUE (product_id, shelf_id)
 );
 
-CREATE TABLE IF NOT EXISTS stock_history (
-  id          BIGSERIAL PRIMARY KEY,
-  stock_id    INT REFERENCES stock(id) ON DELETE CASCADE,
-  delta       INT,
-  after_qty   INT,
-  changed_at  TIMESTAMPTZ DEFAULT now()
+CREATE INDEX idx_stock_product_shelf
+    ON stock (product_id, shelf_id);
+
+CREATE TABLE stock_history (
+    id              SERIAL PRIMARY KEY,
+    product_id      INTEGER NOT NULL,
+    shelf_id        INTEGER NOT NULL,
+    add_quantity    INTEGER NOT NULL,
+    created_at      TIMESTAMPTZ DEFAULT now()
 );
+
 
 -- インデックス
 CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);

@@ -1,62 +1,45 @@
-import Link from "next/link";
-import { headers } from "next/headers";
+// frontend/app/stocks/page.tsx
+"use client";
+import useSWR from "swr";
 
-export const dynamic = "force-dynamic";
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-function getApiBase(): string {
-  const env = process.env.NEXT_PUBLIC_API_BASE;
-  if (env) return env;
+export default function StockListPage() {
+  const { data, error } = useSWR("/api/stocks", fetcher);
 
-  const hdr = headers();
-  const host = hdr.get("host");
-  if (host) {
-    const proto = hdr.get("x-forwarded-proto") ?? "http";
-    return `${proto}://${host}`;
-  }
-  return "http://backend:3000"; // fallback
-}
-
-async function fetchStocks(q: string) {
-  const res = await fetch(`${getApiBase()}/api/stocks?${q}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`fetch_error_${res.status}`);
-  return res.json() as Promise<any[]>;
-}
-
-export default async function StockList({
-  searchParams,
-}: {
-  searchParams: { q?: string };
-}) {
-  const q = searchParams.q ?? "";
-  const stocks = await fetchStocks(new URLSearchParams({ q }).toString());
+  if (error) return <p className="text-red-600">読み込みエラー</p>;
+  if (!data) return <p>読み込み中…</p>;
 
   return (
-    <main className="p-4 max-w-md mx-auto space-y-4">
-      <form>
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="検索"
-          className="border rounded px-3 py-2 w-full"
-        />
-      </form>
-
-      <ul className="space-y-2">
-        {stocks.length === 0 && (
-          <li className="text-gray-500">在庫がありません</li>
-        )}
-        {stocks.map((s) => (
-          <li key={s.id} className="border rounded p-3">
-            <p>{s.name}</p>
-            <p className="text-sm text-gray-500">在庫: {s.quantity}</p>
-            <Link href={`/stocks/${s.id}`} className="text-blue-600 underline">
-              編集
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </main>
+    <div className="p-4">
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="border-b">
+            <th className="py-2">商品ID</th>
+            <th className="py-2">棚ID</th>
+            <th className="py-2 text-right">在庫数</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row: any) => (
+            <tr
+              key={`${row.product_id}-${row.shelf_id}`}
+              className="border-b last:border-none"
+            >
+              <td className="py-2">
+                <a
+                  href={`/stocks/${row.product_id}/${row.shelf_id}`}
+                  className="text-blue-600 underline"
+                >
+                  {row.product_id}
+                </a>
+              </td>
+              <td className="py-2">{row.shelf_id}</td>
+              <td className="py-2 text-right">{row.total_quantity}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

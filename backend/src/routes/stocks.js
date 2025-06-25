@@ -1,67 +1,101 @@
-/* eslint-env node */
+// backend/routes/stocks.js
 import express from "express";
-import {
-  listStocks,
-  addOrUpdateStock,
-  upsertStockAbsolute,
-} from "../models/stock.js";
-import { findByBarcode, findById } from "../models/product.js";
-
+import { body, param, validationResult } from "express-validator";
+import { pool } from "../db.js";
 const router = express.Router();
 
-/* GET /api/stocks … そのまま */
-router.get("/", async (req, res, next) => {
-  try {
-    const data = await listStocks(req.query);
-    res.json(data);
-  } catch (e) {
-    next(e);
-  }
-});
+/* ------------------------------------------------------------------ *
+ * POST /api/stocks
+ *  在庫の追加 or 使用（負数）
+ * ------------------------------------------------------------------ */
+router.post(
+  "/",
+  [
+    body("product_id").isInt({ min: 1 }),
+    body("shelf_id").isInt({ min: 1 }),
+    body("quantity").isInt().not().isEmpty(), // 0 以外の整数
+  ],
+  async (req, res, next) => {
+    try {
+      // バリデーション
+      const errors = validationResult(req);
+      if (!errors.isEmpty())
+        return res.status(422).json({ errors: errors.array() });
 
-/* POST /api/stocks */
-router.post("/", async (req, res, next) => {
-  try {
-    /* --- 1. 新形式: productId + quantity --- */
-    if ("productId" in req.body && "quantity" in req.body) {
-      const { productId, shelf_id = null, quantity } = req.body;
+      const { product_id, shelf_id, quantity } = req.body;
+      const client = await pool.connect();
 
-      if (!Number.isInteger(productId) || productId <= 0)
-        return res.status(400).json({ error: "invalid_productId" });
-      if (!Number.isFinite(quantity) || quantity < 0)
-        return res.status(400).json({ error: "invalid_quantity" });
+      /* 1) 履歴を残す -------------------------------------------------- */
+      const histText =
+        "INSERT INTO stock_history (product_id, shelf_id, add_quantity) VALUES ($1,$2,$3)";
+      await client.query(histText, [product_id, shelf_id, quantity]);
 
-      /* products に存在するか確認 */
-      const p = await findById(productId);
-      if (!p) return res.status(404).json({ error: "product_not_found" });
-
-      const stock = await upsertStockAbsolute({
-        user_id: req.user?.id ?? 1,
-        product_id: productId,
-        shelf_id,
-        quantity,
+      /* 2) 在庫を UPSERT  --------------------------------------------- */
+      const upsertText = `
+        INSERT INTO stock (product_id, shelf_id, add_quantity, total_quantity)
+        VALUES ($1, $2, $3, $3)
+        ON CONFLICT (product_id, shelf_id) DO UPDATE
+          SET add_quantity   = EXCLUDED.add_quantity,
+              total_quantity = stock.total_quantity + EXCLUDED.add_quantity,
+              updated_at     = NOW()
+        WHERE stock.total_quantity + EXCLUDED.add_quantity >= 0
+      `;
+      const result = await client.query({
+        name: "upsert_stock", // Prepared statement 名
+        text: upsertText,
+        values: [product_id, shelf_id, quantity],
       });
-      return res.status(201).json(stock);
+
+      // WHERE 条件で 0 行更新なら在庫不足
+      if (result.rowCount === 0)
+        return res.status(409).json({ message: "在庫が不足しています" });
+
+      res.status(201).json({ message: "在庫を更新しました" });
+    } catch (err) {
+      next(err);
     }
+  }
+);
 
-    /* --- 2. 従来形式: barcode + delta --- */
-    const { barcode, shelf_id, delta } = req.body;
-    if (!barcode)
-      return res.status(400).json({ error: "barcode_or_productId_required" });
-
-    const p = await findByBarcode(barcode);
-    if (!p) return res.status(404).json({ error: "product_not_found" });
-
-    const stock = await addOrUpdateStock({
-      user_id: req.user?.id ?? 1,
-      product_id: p.id,
-      shelf_id,
-      delta,
-    });
-    res.status(201).json(stock);
-  } catch (e) {
-    next(e);
+/* ------------------------------------------------------------------ *
+ * GET /api/stocks
+ *  商品×棚ごとの最新在庫一覧
+ * ------------------------------------------------------------------ */
+router.get("/", async (_req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT product_id, shelf_id, total_quantity FROM stock ORDER BY product_id, shelf_id"
+    );
+    res.json(rows);
+  } catch (err) {
+    next(err);
   }
 });
+
+/* ------------------------------------------------------------------ *
+ * GET /api/stocks/:product_id/:shelf_id
+ *  単一レコード取得（フロントのリアルタイム在庫チェック用）
+ * ------------------------------------------------------------------ */
+router.get(
+  "/:product_id/:shelf_id",
+  [param("product_id").isInt({ min: 1 }), param("shelf_id").isInt({ min: 1 })],
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty())
+        return res.status(422).json({ errors: errors.array() });
+
+      const { product_id, shelf_id } = req.params;
+      const { rows } = await pool.query(
+        "SELECT total_quantity FROM stock WHERE product_id=$1 AND shelf_id=$2",
+        [product_id, shelf_id]
+      );
+      if (rows.length === 0) return res.status(404).json({ total_quantity: 0 });
+      res.json(rows[0]);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 export default router;
