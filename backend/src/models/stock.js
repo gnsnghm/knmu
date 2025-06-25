@@ -44,3 +44,33 @@ export async function addOrUpdateStock({
     )
     .then((r) => r.rows[0]);
 }
+
+export async function upsertStockAbsolute({
+  user_id,
+  product_id,
+  shelf_id,
+  quantity,
+}) {
+  return pool
+    .query(
+      `INSERT INTO stock (user_id, product_id, shelf_id, quantity)
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT (user_id, product_id, shelf_id)
+       DO UPDATE SET quantity = $4
+       RETURNING *`,
+      [user_id, product_id, shelf_id, quantity]
+    )
+    .then((r) => r.rows[0]);
+}
+
+export async function createEmptyStock(productId) {
+  const existing = await pool.query(
+    "SELECT 1 FROM stock WHERE product_id = $1 LIMIT 1",
+    [productId]
+  );
+  if (existing.rowCount > 0) return;
+
+  await pool.query("INSERT INTO stock (product_id, quantity) VALUES ($1, 0)", [
+    productId,
+  ]);
+}

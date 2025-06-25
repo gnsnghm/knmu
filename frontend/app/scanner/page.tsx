@@ -5,6 +5,7 @@ import { BrowserMultiFormatReader } from "@zxing/browser";
 import { NotFoundException } from "@zxing/library";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getApiBase } from "@/lib/api";
 
 /**
  * バーコード読み取りページ
@@ -71,20 +72,21 @@ export default function ScannerPage() {
 
         stopReader();
 
-        const res = await fetch(
-          `/api/products?barcode=${encodeURIComponent(barcode)}`,
-          { cache: "no-store" }
-        );
+        // ▼ 1. バーコードが読めた場合: products & stocks を自動生成
+        const res = await fetch(`${getApiBase()}/api/products`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ barcode }),
+        });
 
         if (res.ok) {
-          const data = await res.json();
-          if (data && data.id) {
-            router.push(`/products/${data.id}/stock`);
-            return;
-          }
+          const data = await res.json(); // { id, barcode, … }
+          router.push(`/stocks/${data.id}`); // 在庫入力画面へ
+          return;
         }
 
-        router.push(`/products/new?barcode=${encodeURIComponent(barcode)}`);
+        // ▼ 2. 何らかの失敗 → 手動登録フローへ
+        router.push("/products/new");
       } catch (err: any) {
         if (err instanceof NotFoundException) {
           setMessage("バーコードを読み取れませんでした。再度お試しください。");

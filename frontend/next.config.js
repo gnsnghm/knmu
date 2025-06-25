@@ -3,7 +3,12 @@ const nextConfig = {
   output: "standalone",
   async rewrites() {
     return [
-      { source: "/api/:path*", destination: "http://backend:3000/api/:path*" },
+      {
+        source: "/api/:path*",
+        destination:
+          process.env.BACKEND_INTERNAL_URL?.replace(/\/?$/, "/:path*") ||
+          "http://backend:3000/api/:path*",
+      },
     ];
   },
 };

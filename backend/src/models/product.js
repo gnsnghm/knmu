@@ -18,3 +18,7 @@ export const upsertProduct = async (barcode, p) => {
   );
   return rows[0];
 };
+export async function findById(id) {
+  const res = await pool.query("SELECT * FROM products WHERE id = $1", [id]);
+  return res.rows[0] || null;
+}
