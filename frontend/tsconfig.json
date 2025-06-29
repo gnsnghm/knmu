@@ -2,11 +2,47 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "jsx": "react-jsx",
+    "jsx": "preserve",
     "paths": {
-      "@/lib/*": ["lib/*"], // "@/lib/api" など
-      "@/components/*": ["components/*"]
+      "@/lib/*": [
+        "lib/*"
+      ], // "@/lib/api" など
+      "@/components/*": [
+        "components/*"
+      ]
     },
-    "types": ["node"] // Next.js が内部で参照
-  }
+    "types": [
+      "node"
+    ] // Next.js が内部で参照
+    ,
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": true,
+    "incremental": true,
+    "module": "esnext",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "next-env.d.ts",
+    ".next/types/**/*.ts",
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
