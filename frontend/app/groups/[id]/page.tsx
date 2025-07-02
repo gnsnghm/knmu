@@ -1,12 +1,37 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { Label, Input, Button } from "@/lib/form";
+import { apiGet, apiPost, apiPut } from "@/lib/api";
 export const dynamic = "force-dynamic";
 
 async function getGroup(id: string) {
   if (id === "new") return { name: "" };
-  const r = await fetch(`/api/groups`, { cache: "no-store" });
-  const list = await r.json();
+  const list = await apiGet<any[]>("/api/groups");
   return list.find((g: any) => g.id === Number(id));
+}
+
+// Server Action for creating/updating a group
+async function upsertGroupAction(formData: FormData) {
+  "use server";
+
+  const id = formData.get("id") as string;
+  const name = formData.get("name");
+  const isNew = id === "new";
+
+  try {
+    if (isNew) {
+      await apiPost("/api/groups", { name });
+    } else {
+      await apiPut(`/api/groups/${id}`, { name });
+    }
+  } catch (err) {
+    // TODO: Implement more robust error handling
+    console.error("Failed to save group:", err);
+    return;
+  }
+
+  revalidatePath("/groups"); // Invalidate cache for the groups list page
+  redirect("/groups"); // Redirect to the groups list page
 }
 
 export default async function GroupForm({
@@ -18,17 +43,14 @@ export default async function GroupForm({
   if (!group) notFound();
 
   return (
-    <form
-      action={`/api/groups${params.id === "new" ? "" : `/${params.id}`}`}
-      method="post"
-      className="p-4 max-w-md mx-auto space-y-4"
-    >
+    <form action={upsertGroupAction} className="p-4 max-w-md mx-auto space-y-4">
       <h1 className="text-xl font-semibold">
         {params.id === "new" ? "まとめコード新規" : "まとめコード編集"}
       </h1>
+      <input type="hidden" name="id" value={params.id} />
       <div>
-        <Label>名称</Label>
-        <Input name="name" defaultValue={group.name} required />
+        <Label htmlFor="name">名称</Label>
+        <Input name="name" id="name" defaultValue={group.name} required />
       </div>
       <Button>保存</Button>
     </form>

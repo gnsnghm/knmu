@@ -1,6 +1,7 @@
 // frontend/app/products/page.tsx
 import Link from "next/link";
 import { Suspense } from "react";
+import ProductList from "@/components/ProductList";
 
 export const dynamic = "force-dynamic";
 
@@ -34,8 +35,7 @@ export default async function Products() {
       {/* ③ 商品一覧（データ未取得の間は Skeleton） */}
       <section>
         <Suspense fallback={<p>Loading products…</p>}>
-          {/* TODO: ProductList コンポーネントを実装 */}
-          <p className="text-gray-500">（商品一覧の実装は今後追加予定）</p>
+          <ProductList />
         </Suspense>
       </section>
     </main>

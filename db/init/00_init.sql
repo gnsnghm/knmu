@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS groups (
   id          SERIAL PRIMARY KEY,
   name        TEXT UNIQUE NOT NULL,
-  created_at  TIMESTAMPTZ DEFAULT now()
+  created_at  TIMESTAMPTZ DEFAULT now(),
+  updated_at  TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS products (
@@ -20,12 +21,15 @@ CREATE TABLE IF NOT EXISTS products (
   group_key  TEXT,
   group_id   INT REFERENCES groups(id),   -- ← 紐づけ
   meta_json  JSONB,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS shelves (
   id    SERIAL PRIMARY KEY,
-  label TEXT UNIQUE NOT NULL
+  label TEXT UNIQUE NOT NULL,
+  created_at  TIMESTAMPTZ DEFAULT now(),
+  updated_at  TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE TABLE stock (
@@ -54,3 +58,28 @@ CREATE TABLE stock_history (
 -- インデックス
 CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
 CREATE INDEX IF NOT EXISTS idx_products_group   ON products(group_id);
+
+-- updated_at を自動更新するための共通関数
+CREATE OR REPLACE FUNCTION trigger_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 各テーブルにトリガーを設定
+CREATE OR REPLACE TRIGGER set_timestamp
+BEFORE UPDATE ON groups
+FOR EACH ROW
+EXECUTE FUNCTION trigger_set_timestamp();
+
+CREATE OR REPLACE TRIGGER set_timestamp
+BEFORE UPDATE ON products
+FOR EACH ROW
+EXECUTE FUNCTION trigger_set_timestamp();
+
+CREATE OR REPLACE TRIGGER set_timestamp
+BEFORE UPDATE ON shelves
+FOR EACH ROW
+EXECUTE FUNCTION trigger_set_timestamp();

@@ -1,12 +1,16 @@
 // frontend/components/StockForm.tsx
 "use client";
 import { useEffect, useState } from "react";
+import { apiGet } from "@/lib/api";
 
 type Props = {
   defaultProduct?: number;
   defaultShelf?: number;
   onSuccess?: () => void;
 };
+
+type Product = { id: number; name: string };
+type Shelf = { id: number; label: string };
 
 export default function StockForm({
   defaultProduct,
@@ -16,12 +20,20 @@ export default function StockForm({
   /* --------------------------- 状態管理 --------------------------- */
   const [productId, setProductId] = useState<number | "">(defaultProduct ?? "");
   const [shelfId, setShelfId] = useState<number | "">(defaultShelf ?? "");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [shelves, setShelves] = useState<Shelf[]>([]);
   const [mode, setMode] = useState<"add" | "use">("add");
   const [qty, setQty] = useState<number | "">("");
   const [available, setAvailable] = useState<number>(0);
   const [error, setError] = useState<string>("");
 
   /* 現在在庫を取得 -------------------------------------------------- */
+  useEffect(() => {
+    // 商品リストと棚リストを取得
+    apiGet<Product[]>("/api/products").then(setProducts);
+    apiGet<Shelf[]>("/api/shelves").then(setShelves);
+  }, []);
+
   useEffect(() => {
     if (typeof productId !== "number" || typeof shelfId !== "number") return;
     fetch(`/api/stocks/${productId}/${shelfId}`)
@@ -66,27 +78,41 @@ export default function StockForm({
 
   return (
     <form onSubmit={handleSubmit} className="mt-4 space-y-4 max-w-sm">
-      {/* 商品ID --- 本実装ではセレクトを使う想定 ---------------------- */}
-      <input
-        type="number"
-        placeholder="商品ID"
+      {/* 商品選択 --------------------------------------------------- */}
+      <select
         value={productId}
         onChange={(e) => setProductId(Number(e.target.value))}
-        className="w-full rounded border px-3 py-2"
+        className="w-full rounded border px-3 py-2 bg-white disabled:bg-gray-100"
         required
-        min={1}
-      />
+        disabled={typeof defaultProduct === "number"}
+      >
+        <option value="" disabled>
+          商品を選択してください
+        </option>
+        {products.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </select>
 
-      {/* 棚ID --------------------------------------------------------- */}
-      <input
-        type="number"
-        placeholder="棚ID"
+      {/* 棚選択 ----------------------------------------------------- */}
+      <select
         value={shelfId}
         onChange={(e) => setShelfId(Number(e.target.value))}
-        className="w-full rounded border px-3 py-2"
+        className="w-full rounded border px-3 py-2 bg-white disabled:bg-gray-100"
         required
-        min={1}
-      />
+        disabled={typeof defaultShelf === "number"}
+      >
+        <option value="" disabled>
+          棚を選択してください
+        </option>
+        {shelves.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.label}
+          </option>
+        ))}
+      </select>
 
       {/* 数量 --------------------------------------------------------- */}
       <input

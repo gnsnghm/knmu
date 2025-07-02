@@ -1,43 +1,31 @@
 // frontend/lib/api.ts  (共通ヘルパー・TypeScript版)
 
 /**
- * 実行環境に応じた API ベース URL を返します。
+ * 実行環境に応じた API ベース URL を返します。サーバーサイドでは内部向けURLを、
+ * クライアントサイドでは公開URLを返します。
  *
  * 優先度:
- *   1. BACKEND_INTERNAL_URL  (例: https://api.example.com/api)
- *   2. NEXT_PUBLIC_API_BASE  (例: https://api.example.com)
- *   3. CSR では "" を返して相対パス fetch
- *   4. SSR では Host ヘッダから同一オリジンを推定
- *   5. Docker 開発時の "http://backend:3000"
+ *   - Server: BACKEND_INTERNAL_URL > NEXT_PUBLIC_API_BASE > "http://backend:3000"
+ *   - Client: NEXT_PUBLIC_API_BASE > "" (相対パス)
  */
 export function getApiBase(): string {
-  // 1. 明示設定
-  if (process.env.BACKEND_INTERNAL_URL) {
-    return process.env.BACKEND_INTERNAL_URL.replace(/\/?api\/?$/, "");
-  }
-  if (process.env.NEXT_PUBLIC_API_BASE) {
-    return process.env.NEXT_PUBLIC_API_BASE;
-  }
-
-  // 2. クライアント (ブラウザ)
-  if (typeof window !== "undefined") return "";
-
-  // 3. サーバーコンポーネント / Route Handler
-  try {
-    // dynamic import でバンドル時エラーを回避
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { headers } =
-      require("next/headers") as typeof import("next/headers");
-    const h = headers();
-    const host = h.get("host");
-    const proto = h.get("x-forwarded-proto") ?? "http";
-    if (host) return `${proto}://${host}`;
-  } catch {
-    // noop (headers() は CSR では使用不可)
+  // サーバーサイド実行時
+  if (typeof window === "undefined") {
+    // サーバー間通信用の内部URLが最優先
+    if (process.env.BACKEND_INTERNAL_URL) {
+      return process.env.BACKEND_INTERNAL_URL;
+    }
+    // なければ公開URL
+    if (process.env.NEXT_PUBLIC_API_BASE) {
+      return process.env.NEXT_PUBLIC_API_BASE;
+    }
+    // Docker開発環境用のフォールバック
+    return "http://backend:3000";
   }
 
-  // 4. Docker compose fallback
-  return "http://backend:3000";
+  // クライアントサイド実行時
+  // 公開URLを返す (なければ相対パス)
+  return process.env.NEXT_PUBLIC_API_BASE || "";
 }
 
 /** 共通レスポンスエラー型 */
@@ -53,7 +41,53 @@ export async function apiGet<T = any>(
   init: RequestInit = {}
 ): Promise<T> {
   const url = path.startsWith("http") ? path : `${getApiBase()}${path}`;
-  const res = await fetch(url, { cache: "no-store", ...init });
+  const headers: HeadersInit = { ...init.headers };
+
+  // サーバーサイド実行時、ブラウザからのCookieをバックエンドへ転送する
+  if (typeof window === "undefined") {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { cookies } =
+      require("next/headers") as typeof import("next/headers");
+    const cookieHeader = cookies().toString();
+    if (cookieHeader) {
+      headers["Cookie"] = cookieHeader;
+    }
+  }
+
+  const res = await fetch(url, { cache: "no-store", ...init, headers });
+  if (!res.ok) throw new ApiError(res.status);
+  return res.json() as Promise<T>;
+}
+
+/** PUT helper (JSON) */
+export async function apiPut<T = any>(
+  path: string,
+  body: unknown,
+  init: RequestInit = {}
+): Promise<T> {
+  const url = path.startsWith("http") ? path : `${getApiBase()}${path}`;
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...init.headers,
+  };
+
+  // サーバーサイド実行時、ブラウザからのCookieをバックエンドへ転送する
+  if (typeof window === "undefined") {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { cookies } =
+      require("next/headers") as typeof import("next/headers");
+    const cookieHeader = cookies().toString();
+    if (cookieHeader) {
+      headers["Cookie"] = cookieHeader;
+    }
+  }
+
+  const res = await fetch(url, {
+    method: "PUT",
+    body: JSON.stringify(body),
+    ...init,
+    headers,
+  });
   if (!res.ok) throw new ApiError(res.status);
   return res.json() as Promise<T>;
 }
@@ -65,11 +99,27 @@ export async function apiPost<T = any>(
   init: RequestInit = {}
 ): Promise<T> {
   const url = path.startsWith("http") ? path : `${getApiBase()}${path}`;
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...init.headers,
+  };
+
+  // サーバーサイド実行時、ブラウザからのCookieをバックエンドへ転送する
+  if (typeof window === "undefined") {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { cookies } =
+      require("next/headers") as typeof import("next/headers");
+    const cookieHeader = cookies().toString();
+    if (cookieHeader) {
+      headers["Cookie"] = cookieHeader;
+    }
+  }
+
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
     ...init,
+    headers,
   });
   if (!res.ok) throw new ApiError(res.status);
   return res.json() as Promise<T>;

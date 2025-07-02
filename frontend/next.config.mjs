@@ -1,6 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "item-shopping.c.yimg.jp",
+        port: "",
+        pathname: "/i/g/**",
+      },
+    ],
+  },
   async rewrites() {
     return [
       {

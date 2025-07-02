@@ -80,8 +80,12 @@ export default function ScannerPage() {
         });
 
         if (res.ok) {
-          const data = await res.json(); // { id, barcode, … }
-          router.push(`/stocks/${data.id}`); // 在庫入力画面へ
+          // APIから商品ID(id)と棚ID(shelf_id)を受け取る
+          const data = await res.json();
+          // 新しいURL形式 /stocks/[shelf_id]/[product_id] へ遷移
+          if (data.id && data.shelf_id) {
+            router.push(`/stocks/${data.shelf_id}/${data.id}`);
+          }
           return;
         }
 

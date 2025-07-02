@@ -1,4 +1,4 @@
-// frontend/app/stocks/[product_id]/[shelf_id]/page.tsx
+// frontend/app/stocks/[shelf_id]/[product_id]/page.tsx
 import StockForm from "@/components/StockForm";
 import { notFound } from "next/navigation";
 

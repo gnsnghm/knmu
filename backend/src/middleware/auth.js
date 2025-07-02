@@ -48,10 +48,11 @@ export default async function auth(req, res, next) {
 
 /* ユーザ保存 + next() 共通処理 */
 async function saveAndNext(email, req, next) {
-  req.user = { email };
-  await pool.query(
-    "INSERT INTO users (email) VALUES ($1) ON CONFLICT (email) DO NOTHING",
+  // ユーザーをDBに保存/取得し、IDとemailをreq.userにセットする
+  const { rows } = await pool.query(
+    "INSERT INTO users (email) VALUES ($1) ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email RETURNING id, email",
     [email]
   );
+  req.user = rows[0];
   next();
 }

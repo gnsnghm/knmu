@@ -64,7 +64,16 @@ router.post(
 router.get("/", async (_req, res, next) => {
   try {
     const { rows } = await pool.query(
-      "SELECT product_id, shelf_id, total_quantity FROM stock ORDER BY product_id, shelf_id"
+      `SELECT
+         s.product_id,
+         p.name as product_name,
+         s.shelf_id,
+         sh.label as shelf_label,
+         s.total_quantity
+       FROM stock s
+       JOIN products p ON s.product_id = p.id
+       JOIN shelves sh ON s.shelf_id = sh.id
+       ORDER BY p.name, sh.label`
     );
     res.json(rows);
   } catch (err) {

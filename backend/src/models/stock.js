@@ -27,50 +27,105 @@ export async function listStocks({ q, group, barcode }) {
   return rows;
 }
 
-export async function addOrUpdateStock({
-  user_id,
-  product_id,
-  shelf_id,
-  delta,
-}) {
-  return pool
-    .query(
-      `INSERT INTO stock (user_id, product_id, shelf_id, quantity)
-       VALUES ($1,$2,$3,$4)
-       ON CONFLICT (user_id, product_id, shelf_id)
-       DO UPDATE SET quantity = stock.quantity + $4
-       RETURNING *`,
-      [user_id, product_id, shelf_id, delta]
-    )
-    .then((r) => r.rows[0]);
+/**
+ * 在庫を追加または使用し、履歴を記録します。
+ * この操作はトランザクション内で実行されます。
+ * @param {object} params
+ * @param {number} params.product_id - 商品ID
+ * @param {number} params.shelf_id - 棚ID
+ * @param {number} params.quantity - 追加または使用する数量（使用の場合は負数）
+ * @returns {Promise<object>} 更新後の在庫情報
+ * @throws {Error} 在庫が不足している場合、またはDBエラーが発生した場合
+ */
+export async function addStock({ product_id, shelf_id, quantity }) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // 1. stock_history に履歴をINSERT
+    const historyQuery = `
+      INSERT INTO stock_history (product_id, shelf_id, add_quantity)
+      VALUES ($1, $2, $3)
+    `;
+    await client.query(historyQuery, [product_id, shelf_id, quantity]);
+
+    // 2. stock テーブルをUPSERT（INSERTまたはUPDATE）
+    const upsertQuery = `
+      INSERT INTO stock (product_id, shelf_id, add_quantity, total_quantity)
+      VALUES ($1, $2, $3, $3)
+      ON CONFLICT (product_id, shelf_id) DO UPDATE
+        SET add_quantity   = EXCLUDED.add_quantity,
+            total_quantity = stock.total_quantity + EXCLUDED.add_quantity,
+            updated_at     = NOW()
+      WHERE stock.total_quantity + EXCLUDED.add_quantity >= 0
+      RETURNING *
+    `;
+    const result = await client.query(upsertQuery, [
+      product_id,
+      shelf_id,
+      quantity,
+    ]);
+
+    // WHERE句によって更新が0行だった場合は在庫不足
+    if (result.rowCount === 0) {
+      throw new Error("在庫が不足しています");
+    }
+
+    await client.query("COMMIT");
+    return result.rows[0];
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err; // エラーを呼び出し元に再スローする
+  } finally {
+    client.release();
+  }
 }
 
-export async function upsertStockAbsolute({
-  user_id,
-  product_id,
-  shelf_id,
-  quantity,
-}) {
-  return pool
-    .query(
-      `INSERT INTO stock (user_id, product_id, shelf_id, quantity)
-       VALUES ($1,$2,$3,$4)
-       ON CONFLICT (user_id, product_id, shelf_id)
-       DO UPDATE SET quantity = $4
-       RETURNING *`,
-      [user_id, product_id, shelf_id, quantity]
-    )
-    .then((r) => r.rows[0]);
-}
+/**
+ * 商品の初期在庫レコード（数量0）を作成します。
+ * 既に何らかの棚に在庫が存在する場合は何もしません。
+ * @param {number} productId - 商品ID
+ */
+export async function createInitialStock(productId) {
+  const client = await pool.connect();
+  try {
+    // 既に在庫レコードが存在するか確認
+    const { rowCount: existingStockCount } = await client.query(
+      "SELECT 1 FROM stock WHERE product_id = $1 LIMIT 1",
+      [productId]
+    );
+    if (existingStockCount > 0) {
+      return; // 既に在庫があるので何もしない
+    }
 
-export async function createEmptyStock(productId) {
-  const existing = await pool.query(
-    "SELECT 1 FROM stock WHERE product_id = $1 LIMIT 1",
-    [productId]
-  );
-  if (existing.rowCount > 0) return;
+    // 割り当てるための最初の棚を取得
+    const { rows: shelves } = await client.query(
+      "SELECT id FROM shelves ORDER BY id LIMIT 1"
+    );
+    if (shelves.length === 0) {
+      // 割り当てる棚がない場合は何もしない（ログには残す）
+      console.warn(
+        `[createInitialStock] No shelves found. Cannot create initial stock for product: ${productId}`
+      );
+      return;
+    }
+    const shelfId = shelves[0].id;
 
-  await pool.query("INSERT INTO stock (product_id, quantity) VALUES ($1, 0)", [
-    productId,
-  ]);
+    // トランザクション内で在庫と履歴を作成
+    await client.query("BEGIN");
+    await client.query(
+      "INSERT INTO stock (product_id, shelf_id, add_quantity, total_quantity) VALUES ($1, $2, 0, 0)",
+      [productId, shelfId]
+    );
+    await client.query(
+      "INSERT INTO stock_history (product_id, shelf_id, add_quantity) VALUES ($1, $2, 0)",
+      [productId, shelfId]
+    );
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
