@@ -25,29 +25,49 @@ export default function StockListPage() {
       <table className="w-full text-left border-collapse text-sm">
         <thead>
           <tr className="border-b">
+            <th className="py-2 px-2 w-16">画像</th>
             <th className="py-2 px-2">商品</th>
             <th className="py-2 px-2">棚</th>
             <th className="py-2 px-2 text-right">在庫数</th>
           </tr>
         </thead>
         <tbody>
-          {data.map((row: any) => (
-            <tr
-              key={`${row.product_id}-${row.shelf_id}`}
-              className="border-b last:border-none"
-            >
-              <td className="py-2 px-2">
-                <a
-                  href={`/stocks/${row.shelf_id}/${row.product_id}`}
-                  className="text-blue-600 underline"
-                >
-                  {row.product_name}
-                </a>
-              </td>
-              <td className="py-2 px-2">{row.shelf_label}</td>
-              <td className="py-2 px-2 text-right">{row.total_quantity}</td>
-            </tr>
-          ))}
+          {data
+            .filter((row: any) => row.total_quantity > 0)
+            .map((row: any) => (
+              <tr
+                key={`${row.product_id}-${row.shelf_id}`}
+                className="border-b last:border-none"
+              >
+                <td className="py-2 px-2">
+                  {row.image_url ? (
+                    <img
+                      src={row.image_url}
+                      alt={row.product_name}
+                      className="w-12 h-12 object-cover rounded"
+                      // 画像読み込みエラー時のフォールバック
+                      onError={(e) => (e.currentTarget.style.display = "none")}
+                    />
+                  ) : (
+                    <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-500">
+                      <span role="img" aria-label="no image">
+                        📦
+                      </span>
+                    </div>
+                  )}
+                </td>
+                <td className="py-2 px-2">
+                  <a
+                    href={`/stocks/${row.shelf_id}/${row.product_id}`}
+                    className="text-blue-600 underline"
+                  >
+                    {row.product_name}
+                  </a>
+                </td>
+                <td className="py-2 px-2">{row.shelf_label}</td>
+                <td className="py-2 px-2 text-right">{row.total_quantity}</td>
+              </tr>
+            ))}
         </tbody>
       </table>
     </div>

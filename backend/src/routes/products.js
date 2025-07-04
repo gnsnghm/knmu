@@ -1,6 +1,7 @@
 // backend/routes/products.js
 import express from "express";
 import multer from "multer";
+import { param, validationResult } from "express-validator";
 import axios from "axios";
 import { fetchByJan } from "../services/yahooService.js";
 import {
@@ -137,10 +138,11 @@ router.get("/:id(\\d+)", async (req, res, next) => {
  * PUT /api/products/:id
  *    - 商品情報の更新
  * ─────────────────────────────────────────── */
-router.put("/:id(\\d+)", upload.single("image"), async (req, res, next) => {
+router.put("/:id(\\d+)", async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    const { name, brand } = req.body;
+    // フロントエンドからS3のURLが imageUrl として渡される
+    const { name, brand, imageUrl } = req.body;
 
     // 1. 更新対象の商品が存在するか確認
     const existingProduct = await findById(id);
@@ -148,15 +150,10 @@ router.put("/:id(\\d+)", upload.single("image"), async (req, res, next) => {
       return res.status(404).json({ error: "not_found" });
     }
 
-    // 2. 新しい画像ファイルがアップロードされていればS3に保存
-    let imagePath = existingProduct.image_path; // デフォルトは既存のパス
-    if (req.file) {
-      imagePath = await uploadImageBufferToS3(
-        req.file.buffer,
-        req.file.mimetype,
-        id
-      );
-    }
+    // 2. 新しい画像URLが渡されていれば image_path を更新する
+    // imageUrl が undefined の場合は既存のパスを維持する
+    const imagePath =
+      imageUrl !== undefined ? imageUrl : existingProduct.image_path;
 
     // 3. データベースを更新
     const { rows } = await pool.query(
@@ -207,5 +204,49 @@ router.post("/", (req, res, next) => {
   const { barcode } = req.body || {};
   handleBarcodeRequest(barcode, res, next);
 });
+
+/* ──────────────────────────────────────────────
+ * DELETE /api/products/:id
+ *    - 商品の削除 (関連データも削除)
+ * ─────────────────────────────────────────── */
+router.delete(
+  "/:id(\\d+)",
+  [param("id").isInt({ min: 1 })],
+  async (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(422).json({ errors: errors.array() });
+    }
+
+    const id = Number(req.params.id);
+    const client = await pool.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      // 外部キー制約があるため、関連テーブルから先に削除
+      await client.query("DELETE FROM stock_history WHERE product_id = $1", [
+        id,
+      ]);
+      await client.query("DELETE FROM stock WHERE product_id = $1", [id]);
+      const result = await client.query("DELETE FROM products WHERE id = $1", [
+        id,
+      ]);
+
+      if (result.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "Product not found" });
+      }
+
+      await client.query("COMMIT");
+      res.status(204).send(); // 成功、コンテンツなし
+    } catch (err) {
+      await client.query("ROLLBACK");
+      next(err);
+    } finally {
+      client.release();
+    }
+  }
+);
 
 export default router;

@@ -13,7 +13,14 @@ router.post(
   [
     body("product_id").isInt({ min: 1 }),
     body("shelf_id").isInt({ min: 1 }),
-    body("quantity").isInt().not().isEmpty(), // 0 以外の整数
+    body("quantity")
+      .isInt()
+      .custom((value) => {
+        if (value === 0) {
+          throw new Error("数量には0以外の整数を指定してください");
+        }
+        return true;
+      }),
   ],
   async (req, res, next) => {
     const errors = validationResult(req);
@@ -93,7 +100,8 @@ router.get("/", async (_req, res, next) => {
          p.name as product_name,
          s.shelf_id,
          sh.label as shelf_label,
-         s.total_quantity
+         s.total_quantity,
+         COALESCE(p.image_path, p.image_url) as image_url
        FROM stock s
        JOIN products p ON s.product_id = p.id
        JOIN shelves sh ON s.shelf_id = sh.id

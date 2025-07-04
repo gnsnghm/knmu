@@ -35,6 +35,36 @@ export class ApiError extends Error {
   }
 }
 
+export async function apiDelete(
+  path: string,
+  init: RequestInit = {}
+): Promise<void> {
+  const url = path.startsWith("http") ? path : `${getApiBase()}${path}`;
+  const headers: HeadersInit = { ...init.headers };
+
+  // サーバーサイド実行時、ブラウザからのCookieをバックエンドへ転送する
+  if (typeof window === "undefined") {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { cookies } =
+      require("next/headers") as typeof import("next/headers");
+    const cookieHeader = cookies().toString();
+    if (cookieHeader) {
+      headers["Cookie"] = cookieHeader;
+    }
+  }
+
+  const res = await fetch(url, {
+    method: "DELETE",
+    ...init,
+    headers,
+  });
+
+  if (!res.ok) {
+    throw new ApiError(res.status);
+  }
+  // 204 No Content の場合は body がないので json() を呼ばない
+}
+
 /** GET helper (JSON) */
 export async function apiGet<T = any>(
   path: string,

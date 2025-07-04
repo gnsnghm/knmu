@@ -29,7 +29,7 @@ export const upsertProduct = async (barcode, p) => {
 export async function findById(id) {
   const res = await pool.query(
     `SELECT id, barcode, name, brand, group_key, group_id, meta_json, created_at, updated_at,
-            COALESCE(image_path, image_url) as image_url
+            image_path, COALESCE(image_path, image_url) as image_url
      FROM products WHERE id = $1`,
     [id]
   );

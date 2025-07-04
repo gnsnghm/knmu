@@ -62,7 +62,7 @@ export async function uploadImageBufferToS3(fileBuffer, mimeType, productId) {
   }
 
   const extension = (mimeType.split("/")[1] || "jpg").split(";")[0];
-  const key = `products/${productId}/original.${extension}`;
+  const key = `img/products/${productId}/original.${extension}`;
 
   const command = new PutObjectCommand({
     Bucket: BUCKET_NAME,
