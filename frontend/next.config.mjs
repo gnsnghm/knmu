@@ -9,6 +9,12 @@ const nextConfig = {
         port: "",
         pathname: "/i/g/**",
       },
+      {
+        protocol: "https",
+        hostname: process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN,
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
   async rewrites() {

@@ -1,5 +1,7 @@
 // backend/routes/products.js
 import express from "express";
+import multer from "multer";
+import axios from "axios";
 import { fetchByJan } from "../services/yahooService.js";
 import {
   findByBarcode,
@@ -7,10 +9,58 @@ import {
   upsertProduct,
   listProducts,
 } from "../models/product.js";
+import { uploadImageBufferToS3 } from "../lib/image-handler.js";
 import { createInitialStock } from "../models/stock.js";
 import { pool } from "../db.js";
 
+// ファイルアップロードをメモリ上で処理するためのMulter設定
+const upload = multer({ storage: multer.memoryStorage() });
 const router = express.Router();
+
+/**
+ * URLから画像をダウンロードし、S3にアップロードして、DBのimage_pathを更新する
+ * @param {object} product - 商品オブジェクト (id, image_url を含む)
+ * @returns {Promise<string|null>} S3に保存された画像のパス。失敗した場合はnull
+ */
+async function downloadAndUploadImage(product) {
+  // productオブジェクト、ID、画像URLの存在をチェック
+  if (!product?.id || !product.image_url) {
+    return null;
+  }
+
+  try {
+    // 1. URLから画像をダウンロード
+    const response = await axios.get(product.image_url, {
+      responseType: "arraybuffer", // 画像をバイナリデータとして取得
+    });
+    const imageBuffer = response.data;
+    const mimeType = response.headers["content-type"];
+
+    // 2. S3にアップロード
+    const imagePath = await uploadImageBufferToS3(
+      imageBuffer,
+      mimeType,
+      product.id
+    );
+
+    // 3. DBのimage_pathを更新
+    if (imagePath) {
+      await pool.query("UPDATE products SET image_path = $1 WHERE id = $2", [
+        imagePath,
+        product.id,
+      ]);
+      return imagePath;
+    }
+    return null;
+  } catch (error) {
+    // 画像のダウンロードやアップロードに失敗しても処理は続行させる
+    console.error(
+      `Failed to process image for product ${product.id} from ${product.image_url}:`,
+      error.message
+    );
+    return null;
+  }
+}
 
 // 商品をバーコードで検索または作成する共通ロジック
 async function findOrCreateProductByBarcode(barcode) {
@@ -19,6 +69,15 @@ async function findOrCreateProductByBarcode(barcode) {
     const fetched = await fetchByJan(barcode);
     // Yahoo APIで見つからなくても、バーコード情報だけで商品を登録する
     product = await upsertProduct(barcode, fetched || {});
+  }
+
+  // 画像URLがあり、まだS3に保存されていない場合、ダウンロードしてS3に保存
+  if (product && product.image_url && !product.image_path) {
+    const imagePath = await downloadAndUploadImage(product);
+    if (imagePath) {
+      // メモリ上のproductオブジェクトを更新して、後続の処理に反映させる
+      product.image_path = imagePath;
+    }
   }
   return product;
 }
@@ -47,8 +106,14 @@ async function handleBarcodeRequest(barcode, res, next) {
     // createInitialStock が実行されるので、棚は必ず存在するはず
     const shelf_id = rows[0]?.shelf_id;
 
-    // productオブジェクトとshelf_idをマージして返す
-    res.json({ ...product, shelf_id });
+    // レスポンス用にproductオブジェクトを整形
+    // image_urlにはS3のパス(image_path)を優先して設定する
+    const responseProduct = {
+      ...product,
+      image_url: product.image_path || product.image_url,
+    };
+
+    res.json({ ...responseProduct, shelf_id });
   } catch (err) {
     next(err);
   }
@@ -72,16 +137,36 @@ router.get("/:id(\\d+)", async (req, res, next) => {
  * PUT /api/products/:id
  *    - 商品情報の更新
  * ─────────────────────────────────────────── */
-router.put("/:id(\\d+)", async (req, res, next) => {
+router.put("/:id(\\d+)", upload.single("image"), async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const { name, brand } = req.body;
 
+    // 1. 更新対象の商品が存在するか確認
+    const existingProduct = await findById(id);
+    if (!existingProduct) {
+      return res.status(404).json({ error: "not_found" });
+    }
+
+    // 2. 新しい画像ファイルがアップロードされていればS3に保存
+    let imagePath = existingProduct.image_path; // デフォルトは既存のパス
+    if (req.file) {
+      imagePath = await uploadImageBufferToS3(
+        req.file.buffer,
+        req.file.mimetype,
+        id
+      );
+    }
+
+    // 3. データベースを更新
     const { rows } = await pool.query(
-      "UPDATE products SET name = $1, brand = $2, updated_at = NOW() WHERE id = $3 RETURNING *",
-      [name, brand, id]
+      `UPDATE products SET name = $1, brand = $2, image_path = $3, updated_at = NOW() 
+       WHERE id = $4 
+       RETURNING id, name, brand, updated_at, COALESCE(image_path, image_url) as image_url`,
+      [name, brand, imagePath, id]
     );
 
+    // findByIdでチェック済みのため、この分岐は通常通らない
     if (rows.length === 0) {
       return res.status(404).json({ error: "not_found" });
     }

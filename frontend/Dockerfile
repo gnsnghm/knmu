@@ -7,6 +7,8 @@ RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 COPY . .
 
 FROM deps AS builder
+ARG NEXT_PUBLIC_CLOUDFRONT_DOMAIN
+ENV NEXT_PUBLIC_CLOUDFRONT_DOMAIN=${NEXT_PUBLIC_CLOUDFRONT_DOMAIN}
 RUN npm run build
 
 # --------- production runner ---------

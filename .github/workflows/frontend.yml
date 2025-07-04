@@ -40,11 +40,9 @@ jobs:
           npm run lint
           npm run typecheck
 
-      - name: Build
-        working-directory: frontend
-        run: npm run build # Next.js build → .next/standalone
-
       - name: Build runtime image
         run: |
-          docker build -t household-frontend:${{ github.sha }} \
+          docker build \
+            --build-arg NEXT_PUBLIC_CLOUDFRONT_DOMAIN="dummy.cloudfront.net" \
+            -t household-frontend:${{ github.sha }} \
             -f frontend/Dockerfile frontend

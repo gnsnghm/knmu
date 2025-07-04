@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS products (
   barcode    TEXT UNIQUE NOT NULL,
   name       TEXT NOT NULL,
   image_url  TEXT,
+  image_path TEXT,
   brand      TEXT,
   group_key  TEXT,
   group_id   INT REFERENCES groups(id),   -- ← 紐づけ

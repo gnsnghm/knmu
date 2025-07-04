@@ -16,43 +16,67 @@ router.post(
     body("quantity").isInt().not().isEmpty(), // 0 以外の整数
   ],
   async (req, res, next) => {
-    try {
-      // バリデーション
-      const errors = validationResult(req);
-      if (!errors.isEmpty())
-        return res.status(422).json({ errors: errors.array() });
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(422).json({ errors: errors.array() });
+    }
 
-      const { product_id, shelf_id, quantity } = req.body;
-      const client = await pool.connect();
+    const { product_id, shelf_id, quantity } = req.body;
+    const client = await pool.connect();
+
+    try {
+      await client.query("BEGIN");
 
       /* 1) 履歴を残す -------------------------------------------------- */
       const histText =
         "INSERT INTO stock_history (product_id, shelf_id, add_quantity) VALUES ($1,$2,$3)";
       await client.query(histText, [product_id, shelf_id, quantity]);
 
-      /* 2) 在庫を UPSERT  --------------------------------------------- */
-      const upsertText = `
-        INSERT INTO stock (product_id, shelf_id, add_quantity, total_quantity)
-        VALUES ($1, $2, $3, $3)
-        ON CONFLICT (product_id, shelf_id) DO UPDATE
-          SET add_quantity   = EXCLUDED.add_quantity,
-              total_quantity = stock.total_quantity + EXCLUDED.add_quantity,
+      let result;
+      // 在庫を追加する場合 (quantity > 0)
+      if (quantity > 0) {
+        const upsertText = `
+          INSERT INTO stock (product_id, shelf_id, add_quantity, total_quantity)
+          VALUES ($1, $2, $3, $3)
+          ON CONFLICT (product_id, shelf_id) DO UPDATE
+            SET add_quantity   = EXCLUDED.add_quantity,
+                total_quantity = stock.total_quantity + EXCLUDED.add_quantity,
+                updated_at     = NOW()`;
+        result = await client.query(upsertText, [
+          product_id,
+          shelf_id,
+          quantity,
+        ]);
+      }
+      // 在庫を使用する場合 (quantity < 0)
+      else {
+        const updateText = `
+          UPDATE stock
+          SET add_quantity   = $3,
+              total_quantity = stock.total_quantity + $3,
               updated_at     = NOW()
-        WHERE stock.total_quantity + EXCLUDED.add_quantity >= 0
-      `;
-      const result = await client.query({
-        name: "upsert_stock", // Prepared statement 名
-        text: upsertText,
-        values: [product_id, shelf_id, quantity],
-      });
+          WHERE product_id = $1 AND shelf_id = $2
+            AND stock.total_quantity + $3 >= 0`;
+        result = await client.query(updateText, [
+          product_id,
+          shelf_id,
+          quantity,
+        ]);
+      }
 
-      // WHERE 条件で 0 行更新なら在庫不足
-      if (result.rowCount === 0)
+      // 在庫使用時に更新行数が0だった場合は、在庫がなかったか不足していたということ
+      if (quantity < 0 && result.rowCount === 0) {
+        await client.query("ROLLBACK");
         return res.status(409).json({ message: "在庫が不足しています" });
+      }
 
+      await client.query("COMMIT");
       res.status(201).json({ message: "在庫を更新しました" });
     } catch (err) {
+      await client.query("ROLLBACK");
       next(err);
+    } finally {
+      client.release();
     }
   }
 );
