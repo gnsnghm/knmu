@@ -11,6 +11,9 @@ export default function StockDetail({
   const [currentStock, setCurrentStock] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [successMessage, setSuccessMessage] = useState("");
+  const [history, setHistory] = useState<
+    { id: number; add_quantity: number; created_at: string }[]
+  >([]);
 
   // 在庫数を取得する関数
   const fetchStock = async () => {
@@ -23,18 +26,33 @@ export default function StockDetail({
     return data.total_quantity;
   };
 
+  // 履歴を取得する関数
+  const fetchHistory = async () => {
+    const apiUrl = `/api/stocks/${product_id}/${shelf_id}/history?limit=5`;
+    const res = await fetch(apiUrl, { cache: "no-store" });
+    if (!res.ok) throw new Error("履歴の取得に失敗しました");
+    return res.json();
+  };
+
   // 初回読み込み時に在庫を取得
   useEffect(() => {
-    fetchStock()
-      .then(setCurrentStock)
+    Promise.all([fetchStock(), fetchHistory()])
+      .then(([stockQty, hist]) => {
+        setCurrentStock(stockQty);
+        setHistory(hist);
+      })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, [product_id, shelf_id]);
 
   // フォーム送信成功時の処理
   const handleSuccess = async () => {
-    const latestStock = await fetchStock();
+    const [latestStock, latestHistory] = await Promise.all([
+      fetchStock(),
+      fetchHistory(),
+    ]);
     setCurrentStock(latestStock);
+    setHistory(latestHistory);
     setSuccessMessage("登録が完了しました");
     setTimeout(() => setSuccessMessage(""), 3000); // 3秒後にメッセージを消す
   };
@@ -52,6 +70,20 @@ export default function StockDetail({
       {successMessage && (
         <div className="p-3 bg-green-100 text-green-800 border border-green-200 rounded-md">
           {successMessage}
+        </div>
+      )}
+
+      {history.length > 0 && (
+        <div>
+          <h3 className="font-semibold">直近の履歴</h3>
+          <ul className="list-disc pl-5 space-y-1 mt-1 text-sm">
+            {history.map((h) => (
+              <li key={h.id}>
+                {new Date(h.created_at).toLocaleString()} :{" "}
+                {h.add_quantity > 0 ? `+${h.add_quantity}` : h.add_quantity}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
