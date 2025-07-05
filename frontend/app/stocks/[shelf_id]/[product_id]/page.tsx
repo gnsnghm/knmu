@@ -63,9 +63,6 @@ export default function StockDetail({
 
   return (
     <div className="p-6 space-y-4">
-      <h2 className="text-xl font-bold">
-        商品 {product_id} / 棚 {shelf_id}
-      </h2>
       <p className="text-lg">
         現在在庫：<span className="font-bold text-2xl">{currentStock}</span> 個
       </p>
@@ -82,8 +79,7 @@ export default function StockDetail({
           <ul className="list-disc pl-5 space-y-1 mt-1 text-sm">
             {history.map((h) => (
               <li key={h.id}>
-                {new Date(h.created_at).toLocaleString()} :
-                {" "}
+                {new Date(h.created_at).toLocaleString()} :{" "}
                 {h.add_quantity > 0 ? `+${h.add_quantity}` : h.add_quantity}
               </li>
             ))}
