@@ -45,9 +45,6 @@ export default function StockDetail({
 
   return (
     <div className="p-6 space-y-4">
-      <h2 className="text-xl font-bold">
-        商品 {product_id} / 棚 {shelf_id}
-      </h2>
       <p className="text-lg">
         現在在庫：<span className="font-bold text-2xl">{currentStock}</span> 個
       </p>

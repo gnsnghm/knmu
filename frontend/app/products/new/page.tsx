@@ -7,25 +7,29 @@ async function createProductAction(formData: FormData) {
   "use server";
 
   const barcode = formData.get("barcode") as string;
+  let product: { id: number; shelf_id: number } | null = null;
 
   try {
-    const product = await apiPost<{ id: number; shelf_id: number }>(
-      "/api/products",
-      { barcode }
-    );
-
-    if (product.id && product.shelf_id) {
-      revalidatePath("/stocks");
-      revalidatePath("/products");
-      redirect(`/stocks/${product.shelf_id}/${product.id}`);
-    } else {
-      console.error("API did not return expected product data", product);
-      redirect("/products");
-    }
+    // API呼び出しのみを try ブロック内に配置
+    product = await apiPost<{ id: number; shelf_id: number }>("/api/products", {
+      barcode,
+    });
   } catch (err) {
     console.error("Failed to create product:", err);
     // 400エラー(不正なバーコード)の場合、エラーメッセージ付きでフォームに戻す
+    // ここではAPI呼び出し自体の失敗のみをハンドルする
     redirect("/products/new?error=invalid_barcode");
+  }
+
+  // try...catch の外でリダイレクトを処理する
+  if (product && product.id && product.shelf_id) {
+    revalidatePath("/stocks");
+    revalidatePath("/products");
+    redirect(`/stocks/${product.shelf_id}/${product.id}`);
+  } else {
+    // APIは成功したが期待したデータが返ってこなかった場合
+    console.error("API did not return expected product data", product);
+    redirect("/products/new?error=unknown");
   }
 }
 
@@ -52,6 +56,11 @@ export default function NewProductPage({
         {searchParams?.error === "invalid_barcode" && (
           <p className="text-red-500 text-sm">
             無効なバーコードです。8桁または13桁の数字を入力してください。
+          </p>
+        )}
+        {searchParams?.error === "unknown" && (
+          <p className="text-red-500 text-sm">
+            不明なエラーが発生しました。もう一度お試しください。
           </p>
         )}
         <Button>登録して在庫入力へ</Button>
