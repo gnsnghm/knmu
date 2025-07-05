@@ -71,3 +71,8 @@ Thumbs.db
 ehthumbs.db
 *.orig
 *.tgz
+
+########################
+#  Custom Images
+########################
+frontend/public/img/Headnmu.png

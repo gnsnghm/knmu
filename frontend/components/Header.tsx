@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
 const navItems = [
   { href: "/products", title: "商品", ico: "📦" },
@@ -10,6 +11,9 @@ const navItems = [
   { href: "/groups", title: "まとめ", ico: "🗂️" },
   { href: "/me", title: "ユーザ", ico: "👤" },
 ];
+
+// .env ファイルからロゴ画像のURLを読み込みます。
+const logoImageUrl = process.env.NEXT_PUBLIC_LOGO_IMAGE_URL;
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,12 +28,27 @@ export default function Header() {
     <header className="bg-white shadow-md sticky top-0 z-10">
       {/* モバイルメニューをposition: absoluteで配置するため、relativeを追加 */}
       <nav className="container mx-auto px-4 py-2 flex justify-between items-center relative">
-        <Link
-          href="/"
-          className="text-lg font-bold text-gray-800 hover:text-blue-600"
-        >
-          Consumables Manager
-        </Link>
+        {logoImageUrl ? (
+          // 環境変数にロゴ画像URLが設定されている場合
+          <Link href="/" className="flex items-center h-8">
+            <Image
+              src={logoImageUrl}
+              alt="Consumables Manager Logo"
+              height={32} // 親要素の h-8 (2rem = 32px) に合わせる
+              width={160} // 画像の縦横比に合わせて調整してください (例: 5:1なら 32*5=160)
+              style={{ width: "auto", height: "100%" }}
+              priority // LCP(Largest Contentful Paint)のため優先的に読み込む
+            />
+          </Link>
+        ) : (
+          // ロゴ画像が設定されていない場合はテキストを表示
+          <Link
+            href="/"
+            className="text-2xl font-bold text-gray-800 hover:text-blue-600 flex items-center h-8"
+          >
+            KNMU
+          </Link>
+        )}
 
         {/* PC用ナビゲーション (md以上で表示) */}
         <ul className="hidden md:flex items-center space-x-2 sm:space-x-4">

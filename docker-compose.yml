@@ -6,10 +6,12 @@ services:
       target: runner
       args:
         - NEXT_PUBLIC_CLOUDFRONT_DOMAIN=${AWS_CLOUDFRONT_DOMAIN}
+        - NEXT_PUBLIC_LOGO_IMAGE_URL=${NEXT_PUBLIC_LOGO_IMAGE_URL}
     command: ["node", "server.js"]
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_CLOUDFRONT_DOMAIN=${AWS_CLOUDFRONT_DOMAIN}
+      - NEXT_PUBLIC_LOGO_IMAGE_URL=${NEXT_PUBLIC_LOGO_IMAGE_URL}
       - NEXT_PUBLIC_API_BASE=http://backend:3000
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
