@@ -1,6 +1,6 @@
 // backend/routes/stocks.js
 import express from "express";
-import { body, param, validationResult } from "express-validator";
+import { body, param, query, validationResult } from "express-validator";
 import { pool } from "../db.js";
 const router = express.Router();
 
@@ -133,6 +133,39 @@ router.get(
       );
       if (rows.length === 0) return res.status(404).json({ total_quantity: 0 });
       res.json(rows[0]);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/* ------------------------------------------------------------------ *
+ * GET /api/stocks/:product_id/:shelf_id/history?limit=5
+ *  在庫履歴の取得
+ * ------------------------------------------------------------------ */
+router.get(
+  "/:product_id/:shelf_id/history",
+  [
+    param("product_id").isInt({ min: 1 }),
+    param("shelf_id").isInt({ min: 1 }),
+    query("limit").optional().isInt({ min: 1 }),
+  ],
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty())
+        return res.status(422).json({ errors: errors.array() });
+
+      const { product_id, shelf_id } = req.params;
+      const limit = req.query.limit ? Number(req.query.limit) : 5;
+      const { rows } = await pool.query(
+        `SELECT id, add_quantity, created_at
+           FROM stock_history
+          WHERE product_id = $1 AND shelf_id = $2
+          ORDER BY id DESC LIMIT $3`,
+        [product_id, shelf_id, limit]
+      );
+      res.json(rows);
     } catch (err) {
       next(err);
     }

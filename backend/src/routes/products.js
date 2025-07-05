@@ -1,6 +1,5 @@
 // backend/routes/products.js
 import express from "express";
-import multer from "multer";
 import { param, validationResult } from "express-validator";
 import axios from "axios";
 import { fetchByJan } from "../services/yahooService.js";
@@ -15,7 +14,6 @@ import { createInitialStock } from "../models/stock.js";
 import { pool } from "../db.js";
 
 // ファイルアップロードをメモリ上で処理するためのMulter設定
-const upload = multer({ storage: multer.memoryStorage() });
 const router = express.Router();
 
 /**
