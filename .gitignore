@@ -54,6 +54,7 @@ pgdata/
 *.sql.dump
 *.sqlite
 *.sqlite3
+*.dump
 
 ########################
 #  IDE / Editor

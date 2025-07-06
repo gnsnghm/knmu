@@ -1,0 +1,5 @@
+# 1) Windows batch files → CRLF でチェックアウト
+*.bat  text eol=crlf
+
+# 2) それ以外のテキスト → LF
+*      text eol=lf
