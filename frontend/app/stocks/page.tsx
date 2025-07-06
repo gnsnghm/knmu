@@ -3,10 +3,19 @@
 import Link from "next/link";
 import useSWR from "swr";
 
+type StockRow = {
+  product_id: number;
+  product_name: string;
+  shelf_id: number;
+  shelf_label: string;
+  total_quantity: number;
+  image_url: string | null;
+};
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function StockListPage() {
-  const { data, error } = useSWR("/api/stocks", fetcher);
+  const { data, error } = useSWR<StockRow[]>("/api/stocks", fetcher);
 
   if (error) return <p className="text-red-600">読み込みエラー</p>;
   if (!data) return <p>読み込み中…</p>;
@@ -33,8 +42,8 @@ export default function StockListPage() {
         </thead>
         <tbody>
           {data
-            .filter((row: any) => row.total_quantity > 0)
-            .map((row: any) => (
+            .filter((row) => row.total_quantity > 0)
+            .map((row) => (
               <tr
                 key={`${row.product_id}-${row.shelf_id}`}
                 className="border-b last:border-none"

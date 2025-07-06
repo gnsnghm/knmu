@@ -4,10 +4,12 @@ import { Label, Input, Button } from "@/lib/form";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
 export const dynamic = "force-dynamic";
 
+type Group = { id: number; name: string };
+
 async function getGroup(id: string) {
-  if (id === "new") return { name: "" };
-  const list = await apiGet<any[]>("/api/groups");
-  return list.find((g: any) => g.id === Number(id));
+  if (id === "new") return { name: "" } as Group;
+  const list = await apiGet<Group[]>("/api/groups");
+  return list.find((g) => g.id === Number(id));
 }
 
 // Server Action for creating/updating a group

@@ -29,13 +29,14 @@ export default function ScannerPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [started, setStarted] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+  type ReaderWithReset = BrowserMultiFormatReader & { reset?: () => void };
+  const codeReaderRef = useRef<ReaderWithReset | null>(null);
 
   /**
    * ZXing インスタンスの停止（型定義に reset がない古いバージョン対策も兼ねて any キャスト）
    */
   const stopReader = () => {
-    (codeReaderRef.current as any)?.reset?.();
+    codeReaderRef.current?.reset?.();
   };
 
   /**
@@ -91,15 +92,16 @@ export default function ScannerPage() {
 
         // ▼ 2. 何らかの失敗 → 手動登録フローへ
         router.push("/products/new");
-      } catch (err: any) {
-        if (err instanceof NotFoundException) {
+      } catch (err: unknown) {
+        const e = err as { name?: string; message?: string };
+        if (e instanceof NotFoundException) {
           setMessage("バーコードを読み取れませんでした。再度お試しください。");
-        } else if (err?.name === "NotAllowedError") {
+        } else if (e?.name === "NotAllowedError") {
           setMessage(
             "カメラへのアクセスが拒否されました。ブラウザの設定をご確認ください。"
           );
         } else {
-          setMessage(err?.message ?? "予期せぬエラーが発生しました。");
+          setMessage(e?.message ?? "予期せぬエラーが発生しました。");
         }
         setStarted(false);
         stopReader();

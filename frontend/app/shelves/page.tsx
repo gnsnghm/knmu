@@ -3,13 +3,17 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+type Shelf = { id: number; label: string };
+
 export default async function Shelves({
   searchParams,
 }: {
   searchParams: { q?: string };
 }) {
   const q = searchParams.q ?? "";
-  const shelves = await apiGet(`/api/shelves?${new URLSearchParams({ q })}`);
+  const shelves = await apiGet<Shelf[]>(
+    `/api/shelves?${new URLSearchParams({ q })}`,
+  );
 
   return (
     <main className="p-4 max-w-md mx-auto space-y-4">
@@ -22,7 +26,7 @@ export default async function Shelves({
         />
       </form>
       <ul className="space-y-2">
-        {shelves.map((s: any) => (
+        {shelves.map((s) => (
           <li key={s.id} className="border rounded p-3 flex justify-between">
             <span>{s.label}</span>
             <Link href={`/shelves/${s.id}`} className="text-blue-600 underline">

@@ -20,9 +20,5 @@ export default defineConfig([
     },
   },
   // 2) TypeScript 追加ルール
-  {
-    files: ["**/*.{ts,mts,cts,tsx}"],
-    plugins: { "@typescript-eslint": tseslint.plugin },
-    rules: tseslint.configs.recommended.rules,
-  },
+  ...tseslint.configs.recommended,
 ]);
