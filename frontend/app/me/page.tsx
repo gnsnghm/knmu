@@ -2,8 +2,10 @@ import { apiGet } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
+type Me = { email: string; created_at: string };
+
 export default async function Me() {
-  const me = await apiGet("/api/me"); // ← backend 側 /me エンドポイント想定
+  const me = await apiGet<Me>("/api/me"); // ← backend 側 /me エンドポイント想定
   return (
     <main className="p-4 max-w-md mx-auto">
       <h1 className="text-xl font-bold mb-4">ユーザ情報</h1>

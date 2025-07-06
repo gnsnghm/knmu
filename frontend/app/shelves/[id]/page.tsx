@@ -4,11 +4,13 @@ import { Label, Input, Button } from "@/lib/form";
 import { apiGet, apiPost, apiPut } from "@/lib/api";
 export const dynamic = "force-dynamic";
 
+type Shelf = { id: number; label: string };
+
 async function getShelf(id: string) {
-  if (id === "new") return { label: "" };
+  if (id === "new") return { label: "" } as Shelf;
   // apiGetヘルパーを使ってバックエンドからデータを取得
-  const list = await apiGet<any[]>("/api/shelves");
-  return list.find((g: any) => g.id === Number(id));
+  const list = await apiGet<Shelf[]>("/api/shelves");
+  return list.find((g) => g.id === Number(id));
 }
 
 // Server Action: フォームのデータを受け取り、バックエンドAPIを呼び出す

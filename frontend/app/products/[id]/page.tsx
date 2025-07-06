@@ -17,7 +17,7 @@ type Product = {
 async function getProduct(id: string) {
   try {
     return await apiGet<Product>(`/api/products/${id}`);
-  } catch (err) {
+  } catch {
     notFound();
   }
 }

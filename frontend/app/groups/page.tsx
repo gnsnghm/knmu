@@ -3,14 +3,16 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+type Group = { id: number; name: string };
+
 export default async function Groups() {
-  const groups = await apiGet("/api/groups");
+  const groups = await apiGet<Group[]>("/api/groups");
 
   return (
     <main className="p-4 max-w-md mx-auto space-y-4">
       <h1 className="text-xl font-bold">まとめコード</h1>
       <ul className="space-y-2">
-        {groups.map((g: any) => (
+        {groups.map((g) => (
           <li key={g.id} className="border rounded p-3 flex justify-between">
             <span>{g.name}</span>
             <Link href={`/groups/${g.id}`} className="text-blue-600 underline">

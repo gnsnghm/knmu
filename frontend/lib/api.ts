@@ -44,9 +44,7 @@ export async function apiDelete(
 
   // サーバーサイド実行時、ブラウザからのCookieをバックエンドへ転送する
   if (typeof window === "undefined") {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { cookies } =
-      require("next/headers") as typeof import("next/headers");
+    const { cookies } = await import("next/headers");
     const cookieHeader = cookies().toString();
     if (cookieHeader) {
       headers["Cookie"] = cookieHeader;
@@ -66,7 +64,7 @@ export async function apiDelete(
 }
 
 /** GET helper (JSON) */
-export async function apiGet<T = any>(
+export async function apiGet<T = unknown>(
   path: string,
   init: RequestInit = {}
 ): Promise<T> {
@@ -75,9 +73,7 @@ export async function apiGet<T = any>(
 
   // サーバーサイド実行時、ブラウザからのCookieをバックエンドへ転送する
   if (typeof window === "undefined") {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { cookies } =
-      require("next/headers") as typeof import("next/headers");
+    const { cookies } = await import("next/headers");
     const cookieHeader = cookies().toString();
     if (cookieHeader) {
       headers["Cookie"] = cookieHeader;
@@ -90,7 +86,7 @@ export async function apiGet<T = any>(
 }
 
 /** PUT helper (JSON) */
-export async function apiPut<T = any>(
+export async function apiPut<T = unknown>(
   path: string,
   body: unknown,
   init: RequestInit = {}
@@ -103,9 +99,7 @@ export async function apiPut<T = any>(
 
   // サーバーサイド実行時、ブラウザからのCookieをバックエンドへ転送する
   if (typeof window === "undefined") {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { cookies } =
-      require("next/headers") as typeof import("next/headers");
+    const { cookies } = await import("next/headers");
     const cookieHeader = cookies().toString();
     if (cookieHeader) {
       headers["Cookie"] = cookieHeader;
@@ -123,7 +117,7 @@ export async function apiPut<T = any>(
 }
 
 /** POST helper (JSON) */
-export async function apiPost<T = any>(
+export async function apiPost<T = unknown>(
   path: string,
   body: unknown,
   init: RequestInit = {}
@@ -136,9 +130,7 @@ export async function apiPost<T = any>(
 
   // サーバーサイド実行時、ブラウザからのCookieをバックエンドへ転送する
   if (typeof window === "undefined") {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { cookies } =
-      require("next/headers") as typeof import("next/headers");
+    const { cookies } = await import("next/headers");
     const cookieHeader = cookies().toString();
     if (cookieHeader) {
       headers["Cookie"] = cookieHeader;
