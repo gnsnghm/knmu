@@ -2,6 +2,7 @@
 "use client";
 import Link from "next/link";
 import useSWR from "swr";
+import { getThumbnailUrl } from "@/lib/getThumbnailUrl";
 
 type StockRow = {
   product_id: number;
@@ -51,7 +52,7 @@ export default function StockListPage() {
                 <td className="py-2 px-2">
                   {row.image_url ? (
                     <img
-                      src={row.image_url}
+                      src={getThumbnailUrl(row.image_url) || row.image_url}
                       alt={row.product_name}
                       className="w-12 h-12 object-cover rounded"
                       // 画像読み込みエラー時のフォールバック

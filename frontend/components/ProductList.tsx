@@ -2,6 +2,7 @@
 import { apiGet } from "@/lib/api";
 import Image from "next/image";
 import Link from "next/link";
+import { getThumbnailUrl } from "@/lib/getThumbnailUrl";
 
 type Product = {
   id: number;
@@ -41,7 +42,11 @@ export default async function ProductList() {
               <td className="px-4 py-2 font-medium">
                 <div className="flex items-center gap-3">
                   <Image
-                    src={product.image_url || "/img/placeholder.svg"}
+                    src={
+                      getThumbnailUrl(product.image_url) ||
+                      product.image_url ||
+                      "/img/placeholder.svg"
+                    }
                     alt={product.name}
                     width={40}
                     height={40}
