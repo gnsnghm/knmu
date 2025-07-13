@@ -1,11 +1,16 @@
-import { checkAndNotify } from '../discordNotifier.js';
-import { pool } from '../../db.js';
-import { loadDiscordConfig } from '../../models/discordConfig.js';
-import fetch from 'node-fetch';
+import { jest } from '@jest/globals';
 
-jest.mock('../../db.js', () => ({ pool: { query: jest.fn() } }));
-jest.mock('../../models/discordConfig.js', () => ({ loadDiscordConfig: jest.fn() }));
-jest.mock('node-fetch', () => jest.fn());
+const actualDiscordConfig = await import('../../models/discordConfig.js');
+jest.unstable_mockModule('../../models/discordConfig.js', () => ({
+  ...actualDiscordConfig,
+  loadDiscordConfig: jest.fn(),
+}));
+jest.unstable_mockModule('node-fetch', () => ({ default: jest.fn() }));
+
+const { default: fetch } = await import('node-fetch');
+const { checkAndNotify } = await import('../discordNotifier.js');
+const { pool } = await import('../../db.js');
+const discordConfigModule = await import('../../models/discordConfig.js');
 
 describe('checkAndNotify', () => {
   afterEach(() => {
@@ -13,11 +18,11 @@ describe('checkAndNotify', () => {
   });
 
   test('sends discord message when not recently notified', async () => {
-    pool.query
+    pool.query = jest.fn()
       .mockResolvedValueOnce({ rows: [{ id: 1, name: 'P', qty: 2, last_added: null }] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({});
-    loadDiscordConfig.mockResolvedValue({ token: 't', channelId: 'c' });
+    discordConfigModule.loadDiscordConfig.mockResolvedValue({ token: 't', channelId: 'c' });
     fetch.mockResolvedValue({ ok: true });
 
     await checkAndNotify();
