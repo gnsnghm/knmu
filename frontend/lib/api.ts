@@ -113,6 +113,7 @@ export async function apiPut<T = unknown>(
     headers,
   });
   if (!res.ok) throw new ApiError(res.status);
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
@@ -144,6 +145,7 @@ export async function apiPost<T = unknown>(
     headers,
   });
   if (!res.ok) throw new ApiError(res.status);
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
@@ -174,5 +176,6 @@ export async function apiPatch<T = unknown>(
     headers,
   });
   if (!res.ok) throw new ApiError(res.status);
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
