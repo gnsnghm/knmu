@@ -8,6 +8,7 @@ import {
   findById,
   upsertProduct,
   listProducts,
+  updateNotify,
 } from "../models/product.js";
 import { uploadImageBufferToS3 } from "../lib/image-handler.js";
 import { createInitialStock } from "../models/stock.js";
@@ -167,6 +168,22 @@ router.put("/:id(\\d+)", async (req, res, next) => {
     }
 
     res.json(rows[0]);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 通知設定を更新
+router.patch("/:id(\\d+)/notify", async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const { notify } = req.body;
+    if (typeof notify !== "boolean") {
+      return res.status(400).json({ error: "invalid_notify" });
+    }
+    const updated = await updateNotify(id, notify);
+    if (!updated) return res.status(404).json({ error: "not_found" });
+    res.json(updated);
   } catch (err) {
     next(err);
   }

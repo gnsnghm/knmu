@@ -2,7 +2,7 @@ import { pool } from "../db.js";
 
 export const findByBarcode = async (barcode) => {
   const { rows } = await pool.query(
-    `SELECT id, barcode, name, brand, group_key, group_id, meta_json, created_at, updated_at,
+    `SELECT id, barcode, name, brand, group_key, group_id, notify, meta_json, created_at, updated_at,
             COALESCE(image_path, image_url) as image_url
      FROM products WHERE barcode=$1`,
     [barcode]
@@ -20,7 +20,7 @@ export const upsertProduct = async (barcode, p) => {
        VALUES($1, $2, $3, $4, $5, $6)
      ON CONFLICT(barcode) DO UPDATE
        SET name=EXCLUDED.name, image_url=EXCLUDED.image_url, meta_json=EXCLUDED.meta_json
-     RETURNING id, barcode, name, brand, group_key, group_id, meta_json, created_at, updated_at,
+     RETURNING id, barcode, name, brand, group_key, group_id, notify, meta_json, created_at, updated_at,
                COALESCE(image_path, image_url) as image_url`,
     [barcode, productName, p.brand, p.image, p.meta, p.group]
   );
@@ -28,7 +28,7 @@ export const upsertProduct = async (barcode, p) => {
 };
 export async function findById(id) {
   const res = await pool.query(
-    `SELECT id, barcode, name, brand, group_key, group_id, meta_json, created_at, updated_at,
+    `SELECT id, barcode, name, brand, group_key, group_id, notify, meta_json, created_at, updated_at,
             image_path, COALESCE(image_path, image_url) as image_url
      FROM products WHERE id = $1`,
     [id]
@@ -42,9 +42,17 @@ export async function findById(id) {
  */
 export async function listProducts() {
   const { rows } = await pool.query(
-    `SELECT id, barcode, name, brand, group_key, group_id, meta_json, created_at, updated_at,
+    `SELECT id, barcode, name, brand, group_key, group_id, notify, meta_json, created_at, updated_at,
             COALESCE(image_path, image_url) as image_url
      FROM products ORDER BY updated_at DESC`
   );
   return rows;
+}
+
+export async function updateNotify(id, notify) {
+  const { rows } = await pool.query(
+    `UPDATE products SET notify=$1 WHERE id=$2 RETURNING notify`,
+    [notify, id]
+  );
+  return rows[0] || null;
 }
