@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS products (
   brand      TEXT,
   group_key  TEXT,
   group_id   INT REFERENCES groups(id),   -- ← 紐づけ
+  notify     BOOLEAN NOT NULL DEFAULT false,
   meta_json  JSONB,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
@@ -53,6 +54,18 @@ CREATE TABLE stock_history (
     shelf_id        INTEGER NOT NULL,
     add_quantity    INTEGER NOT NULL,
     created_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE notification_logs (
+    id          SERIAL PRIMARY KEY,
+    product_id  INTEGER NOT NULL REFERENCES products(id),
+    sent_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE discord_config (
+    id SERIAL PRIMARY KEY,
+    encrypted_token   TEXT NOT NULL,
+    encrypted_channel TEXT NOT NULL
 );
 
 
