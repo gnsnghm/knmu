@@ -25,10 +25,12 @@ async function sendTest() {
   "use server";
   try {
     await apiPost("/api/discord/test", {});
-    redirect("/settings/discord?tested=1");
   } catch (err) {
     console.error("Failed to send test message:", err);
+    return;
   }
+
+  redirect("/settings/discord?tested=1");
 }
 
 export default async function DiscordSettingsPage({
