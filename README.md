@@ -50,8 +50,8 @@ JAN コードのスキャンによる簡単な在庫登録・更新を目指し�
 
 ```bash
 # 1. このリポジトリをクローンします
-git clone https://github.com/yourname/household-consumables-manager.git
-cd household-consumables-manager
+git clone https://github.com/gnsnghm/knmu
+cd knmu
 
 # 2. 環境変数ファイルを作成し、編集します
 # .env ファイルをエディタで開き、データベースの接続情報などを設定します。
