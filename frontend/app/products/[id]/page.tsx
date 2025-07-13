@@ -2,7 +2,7 @@
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import Image from "next/image";
-import { apiGet, apiPut, apiDelete } from "@/lib/api";
+import { apiGet, apiPut, apiDelete, apiPatch } from "@/lib/api";
 import { Button, Input, Label } from "@/lib/form";
 import DeleteProductButton from "@/components/DeleteProductButton";
 import { uploadToS3 } from "@/lib/s3";
@@ -12,6 +12,7 @@ type Product = {
   name: string;
   brand: string | null;
   imageUrl: string | null;
+  notify: boolean;
 };
 
 async function getProduct(id: string) {
@@ -28,6 +29,7 @@ async function updateProductAction(formData: FormData) {
   const id = formData.get("id") as string;
   const name = formData.get("name") as string;
   const brand = formData.get("brand") as string;
+  const notify = formData.get("notify") === "on";
   const imageFile = formData.get("image") as File;
 
   let imageUrl: string | undefined = undefined;
@@ -51,6 +53,7 @@ async function updateProductAction(formData: FormData) {
       payload.imageUrl = imageUrl;
     }
     await apiPut(`/api/products/${id}`, payload);
+    await apiPatch(`/api/products/${id}/notify`, { notify });
   } catch (err) {
     console.error("Failed to update product:", err);
     // TODO: エラーメッセージをユーザーに表示する
@@ -134,6 +137,16 @@ export default async function ProductEditPage({
           <Label htmlFor="brand">ブランド</Label>
           <Input name="brand" id="brand" defaultValue={product.brand ?? ""} />
         </div>
+
+        <label className="inline-flex items-center gap-2">
+          <input
+            type="checkbox"
+            name="notify"
+            defaultChecked={product.notify}
+            className="accent-blue-600"
+          />
+          <span>通知</span>
+        </label>
 
         <Button>更新</Button>
       </form>

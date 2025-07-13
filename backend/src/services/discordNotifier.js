@@ -9,7 +9,7 @@ export async function searchAmazon(name) {
   };
 }
 
-async function sendDiscord(message) {
+export async function sendDiscordMessage(message) {
   const conf = await loadDiscordConfig();
   if (!conf) return;
   const url = `https://discord.com/api/channels/${conf.channelId}/messages`;
@@ -45,7 +45,7 @@ export async function checkAndNotify() {
     const url = result?.url || "";
     const date = p.last_added ? new Date(p.last_added).toISOString().split("T")[0] : "-";
     const message = `商品: ${p.name}\n在庫数: ${p.qty}\n最終追加: ${date}\n${url}`;
-    await sendDiscord(message);
+    await sendDiscordMessage(message);
     await pool.query(
       "INSERT INTO notification_logs (product_id, sent_at) VALUES ($1, NOW())",
       [p.id]
