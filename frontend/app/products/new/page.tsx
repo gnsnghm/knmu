@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { apiPost } from "@/lib/api";
+import { apiPost, apiPatch } from "@/lib/api";
 import { Button, Input, Label } from "@/lib/form";
 
 async function createProductAction(formData: FormData) {
   "use server";
 
   const barcode = formData.get("barcode") as string;
+  const notify = formData.get("notify") === "on";
   let product: { id: number; shelf_id: number } | null = null;
 
   try {
@@ -23,6 +24,11 @@ async function createProductAction(formData: FormData) {
 
   // try...catch の外でリダイレクトを処理する
   if (product && product.id && product.shelf_id) {
+    try {
+      await apiPatch(`/api/products/${product.id}/notify`, { notify });
+    } catch (err) {
+      console.error("Failed to update notify:", err);
+    }
     revalidatePath("/stocks");
     revalidatePath("/products");
     redirect(`/stocks/${product.shelf_id}/${product.id}`);
@@ -63,6 +69,10 @@ export default function NewProductPage({
             不明なエラーが発生しました。もう一度お試しください。
           </p>
         )}
+        <label className="inline-flex items-center gap-2">
+          <input type="checkbox" name="notify" className="accent-blue-600" />
+          <span>通知</span>
+        </label>
         <Button>登録して在庫入力へ</Button>
       </form>
     </main>

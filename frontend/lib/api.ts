@@ -37,7 +37,7 @@ export class ApiError extends Error {
 
 export async function apiDelete(
   path: string,
-  init: RequestInit = {}
+  init: RequestInit = {},
 ): Promise<void> {
   const url = path.startsWith("http") ? path : `${getApiBase()}${path}`;
   const headers: HeadersInit = { ...init.headers };
@@ -66,7 +66,7 @@ export async function apiDelete(
 /** GET helper (JSON) */
 export async function apiGet<T = unknown>(
   path: string,
-  init: RequestInit = {}
+  init: RequestInit = {},
 ): Promise<T> {
   const url = path.startsWith("http") ? path : `${getApiBase()}${path}`;
   const headers: HeadersInit = { ...init.headers };
@@ -89,7 +89,7 @@ export async function apiGet<T = unknown>(
 export async function apiPut<T = unknown>(
   path: string,
   body: unknown,
-  init: RequestInit = {}
+  init: RequestInit = {},
 ): Promise<T> {
   const url = path.startsWith("http") ? path : `${getApiBase()}${path}`;
   const headers: HeadersInit = {
@@ -120,7 +120,7 @@ export async function apiPut<T = unknown>(
 export async function apiPost<T = unknown>(
   path: string,
   body: unknown,
-  init: RequestInit = {}
+  init: RequestInit = {},
 ): Promise<T> {
   const url = path.startsWith("http") ? path : `${getApiBase()}${path}`;
   const headers: HeadersInit = {
@@ -139,6 +139,36 @@ export async function apiPost<T = unknown>(
 
   const res = await fetch(url, {
     method: "POST",
+    body: JSON.stringify(body),
+    ...init,
+    headers,
+  });
+  if (!res.ok) throw new ApiError(res.status);
+  return res.json() as Promise<T>;
+}
+
+/** PATCH helper (JSON) */
+export async function apiPatch<T = unknown>(
+  path: string,
+  body: unknown,
+  init: RequestInit = {},
+): Promise<T> {
+  const url = path.startsWith("http") ? path : `${getApiBase()}${path}`;
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...init.headers,
+  };
+
+  if (typeof window === "undefined") {
+    const { cookies } = await import("next/headers");
+    const cookieHeader = cookies().toString();
+    if (cookieHeader) {
+      headers["Cookie"] = cookieHeader;
+    }
+  }
+
+  const res = await fetch(url, {
+    method: "PATCH",
     body: JSON.stringify(body),
     ...init,
     headers,
