@@ -21,10 +21,20 @@ async function saveDiscordConfig(formData: FormData) {
   redirect("/settings/discord?success=1");
 }
 
+async function sendTest() {
+  "use server";
+  try {
+    await apiPost("/api/discord/test", {});
+    redirect("/settings/discord?tested=1");
+  } catch (err) {
+    console.error("Failed to send test message:", err);
+  }
+}
+
 export default async function DiscordSettingsPage({
   searchParams,
 }: {
-  searchParams?: { success?: string };
+  searchParams?: { success?: string; tested?: string };
 }) {
   const products = await apiGet<Product[]>("/api/products");
   const notifyProducts = products.filter((p) => p.notify);
@@ -33,6 +43,7 @@ export default async function DiscordSettingsPage({
     <div className="p-4 max-w-md mx-auto space-y-6">
       <h1 className="text-xl font-semibold">Discord設定</h1>
       {searchParams?.success && <p className="text-green-600">保存しました</p>}
+      {searchParams?.tested && <p className="text-green-600">送信しました</p>}
       <form action={saveDiscordConfig} className="space-y-4">
         <div>
           <Label htmlFor="token">Bot Token</Label>
@@ -43,6 +54,10 @@ export default async function DiscordSettingsPage({
           <Input id="channelId" name="channelId" required />
         </div>
         <Button>保存</Button>
+      </form>
+
+      <form action={sendTest}>
+        <Button type="submit">テスト送信</Button>
       </form>
 
       <div>
