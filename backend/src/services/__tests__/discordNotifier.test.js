@@ -17,21 +17,29 @@ describe('checkAndNotify', () => {
     jest.clearAllMocks();
   });
 
-  test('sends discord message when not recently notified', async () => {
+  test('sends a consolidated discord message', async () => {
     pool.query = jest.fn()
-      .mockResolvedValueOnce({ rows: [{ id: 1, name: 'P', qty: 2, last_added: null }] })
+      .mockResolvedValueOnce({
+        rows: [
+          { id: 1, name: 'P1', qty: 0, last_added: null, history_count: 2 },
+          { id: 2, name: 'P2', qty: 1, last_added: '2024-01-01', history_count: 2 },
+        ],
+      })
       .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({});
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValue({});
     discordConfigModule.loadDiscordConfig.mockResolvedValue({ token: 't', channelId: 'c' });
-    fetch.mockResolvedValue({ ok: true });
+    fetch
+      .mockResolvedValueOnce({ ok: true, text: async () => '<span class="a-price-whole">100</span>' })
+      .mockResolvedValueOnce({ ok: true, text: async () => '<span class="a-price-whole">200</span>' })
+      .mockResolvedValue({ ok: true });
 
     await checkAndNotify();
 
-    expect(fetch).toHaveBeenCalled();
-    expect(pool.query).toHaveBeenCalledWith(
-      'INSERT INTO notification_logs (product_id, sent_at) VALUES ($1, NOW())',
-      [1]
-    );
+    expect(fetch).toHaveBeenCalledTimes(3);
+    const body = JSON.parse(fetch.mock.calls[2][1].body).content;
+    expect(body).toContain('# P1');
+    expect(body).toContain('# P2');
   });
 });
 
