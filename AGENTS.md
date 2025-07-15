@@ -61,4 +61,3 @@ npm --filter frontend build      # next build
 
 - Do **NOT** modify the root `package.json` or `pnpm-workspace.yaml` files.
 - Do **NOT** commit generated files (e.g., `build/`, `dist/`, etc.).
-- Network access is sandboxed. Do **NOT** attempt to access external APIs or databases directly.
