@@ -1,6 +1,7 @@
 // backend/src/lib/image-handler.js
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import axios from "axios";
+import sharp from "sharp";
 import { s3Client } from "./s3-client.js";
 
 const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;
@@ -15,7 +16,7 @@ const CLOUDFRONT_DOMAIN = process.env.AWS_CLOUDFRONT_DOMAIN;
 export async function cacheProductImageToS3(externalUrl, productId) {
   if (!BUCKET_NAME || !CLOUDFRONT_DOMAIN) {
     throw new Error(
-      "AWS_S3_BUCKET_NAME and AWS_CLOUDFRONT_DOMAIN must be set in environment variables."
+      "AWS_S3_BUCKET_NAME and AWS_CLOUDFRONT_DOMAIN must be set in environment variables.",
     );
   }
   if (!externalUrl) {
@@ -29,22 +30,39 @@ export async function cacheProductImageToS3(externalUrl, productId) {
   });
   const imageBuffer = Buffer.from(response.data);
 
+  // サムネイル画像を生成
+  const thumbnailBuffer = await sharp(imageBuffer)
+    .resize(200, 200, { fit: "inside" })
+    .jpeg({ quality: 80 })
+    .toBuffer();
+
   // 2. S3のキー（ファイルパス）とContent-Typeを決定
   const contentType = response.headers["content-type"] || "image/jpeg"; // デフォルトはjpeg
   const extension = (contentType.split("/")[1] || "jpg").split(";")[0];
-  const key = `img/products/${productId}/original.${extension}`;
+  const originalKey = `img/products/${productId}/original.${extension}`;
+  const thumbnailKey = `img/products/${productId}/thumbnail.jpg`;
 
   // 3. S3にアップロードするためのコマンドを作成
-  const command = new PutObjectCommand({
+  const uploadOriginal = new PutObjectCommand({
     Bucket: BUCKET_NAME,
-    Key: key,
+    Key: originalKey,
     Body: imageBuffer,
     ContentType: contentType,
   });
 
-  await s3Client.send(command);
+  const uploadThumbnail = new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: thumbnailKey,
+    Body: thumbnailBuffer,
+    ContentType: "image/jpeg",
+  });
 
-  return `https://${CLOUDFRONT_DOMAIN}/${key}`;
+  await Promise.all([
+    s3Client.send(uploadOriginal),
+    s3Client.send(uploadThumbnail),
+  ]);
+
+  return `https://${CLOUDFRONT_DOMAIN}/${originalKey}`;
 }
 
 /**
@@ -57,21 +75,37 @@ export async function cacheProductImageToS3(externalUrl, productId) {
 export async function uploadImageBufferToS3(fileBuffer, mimeType, productId) {
   if (!BUCKET_NAME || !CLOUDFRONT_DOMAIN) {
     throw new Error(
-      "AWS_S3_BUCKET_NAME and AWS_CLOUDFRONT_DOMAIN must be set in environment variables."
+      "AWS_S3_BUCKET_NAME and AWS_CLOUDFRONT_DOMAIN must be set in environment variables.",
     );
   }
 
   const extension = (mimeType.split("/")[1] || "jpg").split(";")[0];
-  const key = `img/products/${productId}/original.${extension}`;
+  const originalKey = `img/products/${productId}/original.${extension}`;
+  const thumbnailKey = `img/products/${productId}/thumbnail.jpg`;
 
-  const command = new PutObjectCommand({
+  const thumbnailBuffer = await sharp(fileBuffer)
+    .resize(200, 200, { fit: "inside" })
+    .jpeg({ quality: 80 })
+    .toBuffer();
+
+  const uploadOriginal = new PutObjectCommand({
     Bucket: BUCKET_NAME,
-    Key: key,
+    Key: originalKey,
     Body: fileBuffer,
     ContentType: mimeType,
   });
 
-  await s3Client.send(command);
+  const uploadThumbnail = new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: thumbnailKey,
+    Body: thumbnailBuffer,
+    ContentType: "image/jpeg",
+  });
 
-  return `https://${CLOUDFRONT_DOMAIN}/${key}`;
+  await Promise.all([
+    s3Client.send(uploadOriginal),
+    s3Client.send(uploadThumbnail),
+  ]);
+
+  return `https://${CLOUDFRONT_DOMAIN}/${originalKey}`;
 }
