@@ -1,5 +1,4 @@
-# 1) Windows batch files → CRLF でチェックアウト
 *.bat  text eol=crlf
-
-# 2) それ以外のテキスト → LF
+*.ts   text eol=lf
+*.json text eol=lf
 *      text eol=lf
