@@ -2,7 +2,7 @@
 "use client";
 import Link from "next/link";
 import useSWR from "swr";
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { getThumbnailUrl } from "@/lib/getThumbnailUrl";
 
 type StockRow = {
@@ -18,6 +18,11 @@ type GroupRow = {
   group_id: number;
   group_name: string;
   total_quantity: number;
+  products: {
+    product_id: number;
+    product_name: string;
+    total_quantity: number;
+  }[];
 };
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -105,16 +110,27 @@ export default function StockListPage() {
         <table className="w-full text-left border-collapse text-sm">
           <thead>
             <tr className="border-b">
-              <th className="py-2 px-2">まとめコード</th>
+              <th className="py-2 px-2">まとめコード / 商品</th>
               <th className="py-2 px-2 text-right">在庫数</th>
             </tr>
           </thead>
           <tbody>
-            {(data as GroupRow[]).map((row) => (
-              <tr key={row.group_id} className="border-b last:border-none">
-                <td className="py-2 px-2">{row.group_name}</td>
-                <td className="py-2 px-2 text-right">{row.total_quantity}</td>
-              </tr>
+            {(data as GroupRow[]).map((group) => (
+              <Fragment key={group.group_id}>
+                <tr className="border-b bg-gray-50 font-bold">
+                  <td className="py-2 px-2">{group.group_name}</td>
+                  <td className="py-2 px-2 text-right">{group.total_quantity}</td>
+                </tr>
+                {group.products.map((p) => (
+                  <tr
+                    key={`product-${group.group_id}-${p.product_id}`}
+                    className="border-b last:border-none"
+                  >
+                    <td className="py-1 pl-6 pr-2 text-sm">{p.product_name}</td>
+                    <td className="py-1 px-2 text-right">{p.total_quantity}</td>
+                  </tr>
+                ))}
+              </Fragment>
             ))}
           </tbody>
         </table>

@@ -123,14 +123,43 @@ router.get("/groups", async (_req, res, next) => {
       `SELECT
          COALESCE(g.id, 0) AS group_id,
          COALESCE(g.name, '(未設定)') AS group_name,
+         p.id AS product_id,
+         p.name AS product_name,
          SUM(s.total_quantity) AS total_quantity
        FROM stock s
        JOIN products p ON s.product_id = p.id
        LEFT JOIN groups g ON p.group_id = g.id
-       GROUP BY g.id, g.name
-       ORDER BY group_name`,
+       GROUP BY g.id, g.name, p.id, p.name
+       ORDER BY group_name, product_name`,
     );
-    res.json(rows);
+
+    const map = new Map();
+    for (const row of rows) {
+      const {
+        group_id,
+        group_name,
+        product_id,
+        product_name,
+        total_quantity,
+      } = row;
+      if (!map.has(group_id)) {
+        map.set(group_id, {
+          group_id,
+          group_name,
+          total_quantity: 0,
+          products: [],
+        });
+      }
+      const group = map.get(group_id);
+      group.products.push({
+        product_id,
+        product_name,
+        total_quantity: Number(total_quantity),
+      });
+      group.total_quantity += Number(total_quantity);
+    }
+
+    res.json(Array.from(map.values()));
   } catch (err) {
     next(err);
   }
