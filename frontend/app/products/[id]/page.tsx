@@ -7,12 +7,15 @@ import { Button, Input, Label } from "@/lib/form";
 import DeleteProductButton from "@/components/DeleteProductButton";
 import { uploadToS3 } from "@/lib/s3";
 
+type Group = { id: number; name: string };
+
 type Product = {
   id: number;
   name: string;
   brand: string | null;
   imageUrl: string | null;
   notify: boolean;
+  groupId: number | null;
 };
 
 async function getProduct(id: string) {
@@ -23,12 +26,17 @@ async function getProduct(id: string) {
   }
 }
 
+async function listGroups() {
+  return apiGet<Group[]>("/api/groups");
+}
+
 async function updateProductAction(formData: FormData) {
   "use server";
 
   const id = formData.get("id") as string;
   const name = formData.get("name") as string;
   const brand = formData.get("brand") as string;
+  const groupIdStr = formData.get("groupId") as string;
   const notify = formData.get("notify") === "on";
   const imageFile = formData.get("image") as File;
 
@@ -45,9 +53,15 @@ async function updateProductAction(formData: FormData) {
   }
 
   try {
-    const payload: { name: string; brand: string; imageUrl?: string } = {
+    const payload: {
+      name: string;
+      brand: string;
+      imageUrl?: string;
+      groupId: number | null;
+    } = {
       name,
       brand,
+      groupId: groupIdStr ? Number(groupIdStr) : null,
     };
     if (imageUrl) {
       payload.imageUrl = imageUrl;
@@ -86,6 +100,7 @@ export default async function ProductEditPage({
   params: { id: string };
 }) {
   const product = await getProduct(params.id);
+  const groups = await listGroups();
   const deleteProductWithId = deleteProduct.bind(null, params.id);
 
   // DBから取得したオリジナル画像のURLを元に、サムネイルのURLを生成します。
@@ -136,6 +151,23 @@ export default async function ProductEditPage({
         <div>
           <Label htmlFor="brand">ブランド</Label>
           <Input name="brand" id="brand" defaultValue={product.brand ?? ""} />
+        </div>
+
+        <div>
+          <Label htmlFor="groupId">まとめコード</Label>
+          <select
+            name="groupId"
+            id="groupId"
+            defaultValue={product.groupId ?? ""}
+            className="w-full rounded border px-3 py-2 bg-white"
+          >
+            <option value="">(未設定)</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <label className="inline-flex items-center gap-2">

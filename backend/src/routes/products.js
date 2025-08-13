@@ -40,7 +40,7 @@ async function downloadAndUploadImage(product) {
     const imagePath = await uploadImageBufferToS3(
       imageBuffer,
       mimeType,
-      product.id
+      product.id,
     );
 
     // 3. DBのimage_pathを更新
@@ -56,7 +56,7 @@ async function downloadAndUploadImage(product) {
     // 画像のダウンロードやアップロードに失敗しても処理は続行させる
     console.error(
       `Failed to process image for product ${product.id} from ${product.image_url}:`,
-      error.message
+      error.message,
     );
     return null;
   }
@@ -100,7 +100,7 @@ async function handleBarcodeRequest(barcode, res, next) {
     // リダイレクト先の棚IDを取得 (最新更新 or 最初の棚)
     const { rows } = await pool.query(
       `SELECT shelf_id FROM stock WHERE product_id = $1 ORDER BY updated_at DESC, shelf_id ASC LIMIT 1`,
-      [product.id]
+      [product.id],
     );
 
     // createInitialStock が実行されるので、棚は必ず存在するはず
@@ -141,7 +141,7 @@ router.put("/:id(\\d+)", async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     // フロントエンドからS3のURLが imageUrl として渡される
-    const { name, brand, imageUrl } = req.body;
+    const { name, brand, imageUrl, groupId } = req.body;
 
     // 1. 更新対象の商品が存在するか確認
     const existingProduct = await findById(id);
@@ -156,10 +156,10 @@ router.put("/:id(\\d+)", async (req, res, next) => {
 
     // 3. データベースを更新
     const { rows } = await pool.query(
-      `UPDATE products SET name = $1, brand = $2, image_path = $3, updated_at = NOW() 
-       WHERE id = $4 
-       RETURNING id, name, brand, updated_at, COALESCE(image_path, image_url) as image_url`,
-      [name, brand, imagePath, id]
+      `UPDATE products SET name = $1, brand = $2, image_path = $3, group_id = $4, updated_at = NOW()
+       WHERE id = $5
+       RETURNING id, name, brand, group_id, updated_at, COALESCE(image_path, image_url) as image_url`,
+      [name, brand, imagePath, groupId || null, id],
     );
 
     // findByIdでチェック済みのため、この分岐は通常通らない
@@ -261,7 +261,7 @@ router.delete(
     } finally {
       client.release();
     }
-  }
+  },
 );
 
 export default router;
