@@ -85,7 +85,7 @@ router.post(
     } finally {
       client.release();
     }
-  }
+  },
 );
 
 /* ------------------------------------------------------------------ *
@@ -105,9 +105,61 @@ router.get("/", async (_req, res, next) => {
        FROM stock s
        JOIN products p ON s.product_id = p.id
        JOIN shelves sh ON s.shelf_id = sh.id
-       ORDER BY p.name, sh.label`
+       ORDER BY p.name, sh.label`,
     );
     res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ------------------------------------------------------------------ *
+ * GET /api/stocks/groups
+ *  まとめコード別の在庫数
+ * ------------------------------------------------------------------ */
+router.get("/groups", async (_req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT
+         COALESCE(g.id, 0) AS group_id,
+         COALESCE(g.name, '(未設定)') AS group_name,
+         p.id AS product_id,
+         p.name AS product_name,
+         SUM(s.total_quantity) AS total_quantity
+       FROM stock s
+       JOIN products p ON s.product_id = p.id
+       LEFT JOIN groups g ON p.group_id = g.id
+       GROUP BY g.id, g.name, p.id, p.name
+       ORDER BY group_name, product_name`,
+    );
+
+    const map = new Map();
+    for (const row of rows) {
+      const {
+        group_id,
+        group_name,
+        product_id,
+        product_name,
+        total_quantity,
+      } = row;
+      if (!map.has(group_id)) {
+        map.set(group_id, {
+          group_id,
+          group_name,
+          total_quantity: 0,
+          products: [],
+        });
+      }
+      const group = map.get(group_id);
+      group.products.push({
+        product_id,
+        product_name,
+        total_quantity: Number(total_quantity),
+      });
+      group.total_quantity += Number(total_quantity);
+    }
+
+    res.json(Array.from(map.values()));
   } catch (err) {
     next(err);
   }
@@ -129,14 +181,14 @@ router.get(
       const { product_id, shelf_id } = req.params;
       const { rows } = await pool.query(
         "SELECT total_quantity FROM stock WHERE product_id=$1 AND shelf_id=$2",
-        [product_id, shelf_id]
+        [product_id, shelf_id],
       );
       if (rows.length === 0) return res.status(404).json({ total_quantity: 0 });
       res.json(rows[0]);
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
 
 /* ------------------------------------------------------------------ *
@@ -163,13 +215,13 @@ router.get(
            FROM stock_history
           WHERE product_id = $1 AND shelf_id = $2
           ORDER BY id DESC LIMIT $3`,
-        [product_id, shelf_id, limit]
+        [product_id, shelf_id, limit],
       );
       res.json(rows);
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
 
 export default router;
